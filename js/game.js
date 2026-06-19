@@ -175,7 +175,7 @@ class HillClimbGame {
   init() {
     this.app = new PIXI.Application({
       resizeTo: window,
-      backgroundColor: 0x87CEEF,
+      background: 0x87CEEF,
       antialias: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
       autoDensity: true,
@@ -183,7 +183,8 @@ class HillClimbGame {
     document.body.appendChild(this.app.view);
 
     this.engine = Matter.Engine.create({
-      gravity: { x: 0, y: CONFIG.gravity }
+      gravity: { x: 0, y: CONFIG.gravity },
+      timing: { timeScale: 1 },
     });
     this.world = this.engine.world;
 
@@ -201,7 +202,6 @@ class HillClimbGame {
     this.bindInput();
 
     Matter.Events.on(this.engine, 'collisionStart', (e) => this.handleCollisions(e));
-    Matter.Engine.run(this.engine);
     this.app.ticker.add(() => this.update());
 
     const el = document.getElementById('loading');
@@ -224,28 +224,22 @@ class HillClimbGame {
     const h = this.app.screen.height;
 
     const bg = new PIXI.Graphics();
-    bg.rect(0, 0, w, h).fill(0x1a1a2e);
+    bg.beginFill(0x1a1a2e).drawRect(0, 0, w, h).endFill();
     this.menuContainer.addChild(bg);
 
-    const title = new PIXI.Text({
-      text: 'HILL CLIMB RACING',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: Math.min(36, w * 0.04), fill: '#ffffff', fontWeight: 'bold' })
-    });
+    const title = new PIXI.Text('HILL CLIMB RACING', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: Math.min(36, w * 0.04), fill: '#ffffff', fontWeight: 'bold' }));
     title.anchor.set(0.5, 0);
     title.x = w / 2;
     title.y = 20;
     this.menuContainer.addChild(title);
 
     const coinIcon = new PIXI.Graphics();
-    coinIcon.circle(0, 0, 12).fill(0xFFD700);
+    coinIcon.beginFill(0xFFD700).drawCircle(0, 0, 12).endFill();
     coinIcon.x = w / 2 - 70;
     coinIcon.y = 65;
     this.menuContainer.addChild(coinIcon);
 
-    this.menuMoneyText = new PIXI.Text({
-      text: this.totalMoney.toString(),
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 22, fill: '#FFD700', fontWeight: 'bold' })
-    });
+    this.menuMoneyText = new PIXI.Text(this.totalMoney.toString(), new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 22, fill: '#FFD700', fontWeight: 'bold' }));
     this.menuMoneyText.x = w / 2 - 50;
     this.menuMoneyText.y = 53;
     this.menuContainer.addChild(this.menuMoneyText);
@@ -282,7 +276,7 @@ class HillClimbGame {
     this.menuContainer.addChild(this.menuScrollContent);
 
     const mask = new PIXI.Graphics();
-    mask.rect(0, 85, w, h - 200).fill(0xffffff);
+    mask.beginFill(0xffffff).drawRect(0, 85, w, h - 200).endFill();
     this.menuContainer.addChild(mask);
     this.menuScrollContent.mask = mask;
 
@@ -312,9 +306,9 @@ class HillClimbGame {
       const bgColor = isSelected ? 0x0f3460 : (item.owned ? 0x16213e : 0x2a2a3e);
 
       const bg = new PIXI.Graphics();
-      bg.roundRect(0, 0, cardW, cardH, 12).fill(bgColor);
+      bg.beginFill(bgColor).drawRoundedRect(0, 0, cardW, cardH, 12).endFill();
       if (isSelected) {
-        bg.roundRect(0, 0, cardW, cardH, 12).fill({ color: 0x4a90d9, alpha: 0.3 });
+        bg.beginFill(0x4a90d9, 0.3).drawRoundedRect(0, 0, cardW, cardH, 12).endFill();
       }
       card.addChild(bg);
 
@@ -330,24 +324,18 @@ class HillClimbGame {
         card.addChild(spr);
       } catch(e) {
         const placeholder = new PIXI.Graphics();
-        placeholder.roundRect(cardW / 2 - 40, 25, 80, 80, 8).fill(0x555555);
+        placeholder.beginFill(0x555555).drawRoundedRect(cardW / 2 - 40, 25, 80, 80, 8).endFill();
         card.addChild(placeholder);
       }
 
-      const nameText = new PIXI.Text({
-        text: item.name,
-        style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 17, fill: '#ffffff', fontWeight: 'bold' })
-      });
+      const nameText = new PIXI.Text(item.name, new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 17, fill: '#ffffff', fontWeight: 'bold' }));
       nameText.anchor.set(0.5, 0);
       nameText.x = cardW / 2;
       nameText.y = 120;
       card.addChild(nameText);
 
       if (item.desc && item.owned) {
-        const descText = new PIXI.Text({
-          text: item.desc,
-          style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 11, fill: '#aaaaaa' })
-        });
+        const descText = new PIXI.Text(item.desc, new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 11, fill: '#aaaaaa' }));
         descText.anchor.set(0.5, 0);
         descText.x = cardW / 2;
         descText.y = 142;
@@ -356,28 +344,19 @@ class HillClimbGame {
 
       if (!item.owned) {
         if (item.price > 0) {
-          const priceText = new PIXI.Text({
-            text: item.price.toLocaleString() + ' coins',
-            style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 14, fill: '#FFD700' })
-          });
+          const priceText = new PIXI.Text(item.price.toLocaleString() + ' coins', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 14, fill: '#FFD700' }));
           priceText.anchor.set(0.5, 0);
           priceText.x = cardW / 2;
           priceText.y = 145;
           card.addChild(priceText);
         }
-        const lockT = new PIXI.Text({
-          text: 'LOCKED',
-          style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 13, fill: '#ff6666', fontWeight: 'bold' })
-        });
+        const lockT = new PIXI.Text('LOCKED', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 13, fill: '#ff6666', fontWeight: 'bold' }));
         lockT.anchor.set(0.5, 0);
         lockT.x = cardW / 2;
         lockT.y = 168;
         card.addChild(lockT);
       } else {
-        const selT = new PIXI.Text({
-          text: isSelected ? 'SELECTED' : 'TAP TO SELECT',
-          style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 13, fill: isSelected ? '#4CAF50' : '#888888', fontWeight: 'bold' })
-        });
+        const selT = new PIXI.Text(isSelected ? 'SELECTED' : 'TAP TO SELECT', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 13, fill: isSelected ? '#4CAF50' : '#888888', fontWeight: 'bold' }));
         selT.anchor.set(0.5, 0);
         selT.x = cardW / 2;
         selT.y = 168;
@@ -447,12 +426,9 @@ class HillClimbGame {
     const c = new PIXI.Container();
     c.x = x; c.y = y;
     const bg = new PIXI.Graphics();
-    bg.roundRect(0, 0, w, h, 10).fill(color);
+    bg.beginFill(color).drawRoundedRect(0, 0, w, h, 10).endFill();
     c.addChild(bg);
-    const t = new PIXI.Text({
-      text,
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 20, fill: '#ffffff', fontWeight: 'bold' })
-    });
+    const t = new PIXI.Text(text, new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 20, fill: '#ffffff', fontWeight: 'bold' }));
     t.anchor.set(0.5, 0.5);
     t.x = w / 2; t.y = h / 2;
     c.addChild(t);
@@ -473,30 +449,24 @@ class HillClimbGame {
     this.menuContainer.addChild(c);
 
     const ov = new PIXI.Graphics();
-    ov.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.6 });
+    ov.beginFill(0x000000, 0.6).drawRect(0, 0, w, h).endFill();
     c.addChild(ov);
 
     const dW = Math.min(380, w * 0.8);
     const dH = 250;
     const d = new PIXI.Graphics();
-    d.roundRect(0, 0, dW, dH, 16).fill(0x1a1a2e);
+    d.beginFill(0x1a1a2e).drawRoundedRect(0, 0, dW, dH, 16).endFill();
     d.x = w / 2 - dW / 2;
     d.y = h / 2 - dH / 2;
     c.addChild(d);
 
-    const title = new PIXI.Text({
-      text: 'PURCHASE',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 26, fill: '#ffffff', fontWeight: 'bold' })
-    });
+    const title = new PIXI.Text('PURCHASE', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 26, fill: '#ffffff', fontWeight: 'bold' }));
     title.anchor.set(0.5, 0);
     title.x = w / 2;
     title.y = h / 2 - dH / 2 + 20;
     c.addChild(title);
 
-    this._purchasePriceText = new PIXI.Text({
-      text: '',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 20, fill: '#FFD700' })
-    });
+    this._purchasePriceText = new PIXI.Text('', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 20, fill: '#FFD700' }));
     this._purchasePriceText.anchor.set(0.5, 0);
     this._purchasePriceText.x = w / 2;
     this._purchasePriceText.y = h / 2 - 40;
@@ -537,10 +507,7 @@ class HillClimbGame {
 
   showNotif(msg) {
     if (this._notifText) this._notifText.removeFromParent();
-    const t = new PIXI.Text({
-      text: msg,
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 28, fill: '#FF4C4C', fontWeight: 'bold' })
-    });
+    const t = new PIXI.Text(msg, new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 28, fill: '#FF4C4C', fontWeight: 'bold' }));
     t.anchor.set(0.5, 0.5);
     t.x = this.app.screen.width / 2;
     t.y = this.app.screen.height / 2;
@@ -584,13 +551,13 @@ class HillClimbGame {
     const stage = this.stages[this.stageIndex] || this.stages[0];
     const terrainPoints = genTerrain(this.stageIndex);
 
-    this.app.renderer.backgroundColor = stage.bg;
+    this.app.renderer.background = stage.bg;
 
     const maxX = terrainPoints[terrainPoints.length - 1].x;
     const maxY = Math.min(...terrainPoints.map(p => p.y)) - 5;
 
     const sky = new PIXI.Graphics();
-    sky.rect(-200, -200, maxX * CONFIG.pxPerMeter + 400, 400).fill(stage.bg);
+    sky.beginFill(stage.bg).drawRect(-200, -200, maxX * CONFIG.pxPerMeter + 400, 400).endFill();
     this.gameContainer.addChild(sky);
 
     for (let i = 0; i < terrainPoints.length - 1; i++) {
@@ -615,12 +582,12 @@ class HillClimbGame {
       this.terrainBodies.push(body);
 
       const gfx = new PIXI.Graphics();
-      gfx.poly([
+      gfx.beginFill(stage.ground).drawPolygon([
         -len / 2 * CONFIG.pxPerMeter, 0,
         len / 2 * CONFIG.pxPerMeter, 0,
         len / 2 * CONFIG.pxPerMeter, thick * CONFIG.pxPerMeter * 0.4,
         -len / 2 * CONFIG.pxPerMeter, thick * CONFIG.pxPerMeter * 0.4,
-      ]).fill(stage.ground);
+      ]).endFill();
       gfx.x = cx * CONFIG.pxPerMeter;
       gfx.y = (cy - thick / 2 + 0.3) * CONFIG.pxPerMeter;
       gfx.rotation = angle;
@@ -633,7 +600,7 @@ class HillClimbGame {
     const last = terrainPoints[terrainPoints.length - 1];
     verts.push(last.x * CONFIG.pxPerMeter, (last.y + 30) * CONFIG.pxPerMeter);
     verts.push(terrainPoints[0].x * CONFIG.pxPerMeter, (terrainPoints[0].y + 30) * CONFIG.pxPerMeter);
-    fillGfx.poly(verts).fill(stage.fill);
+    fillGfx.beginFill(stage.fill).drawPolygon(verts).endFill();
     fillGfx.alpha = 0.6;
     this.gameContainer.addChildAt(fillGfx, 0);
 
@@ -654,7 +621,7 @@ class HillClimbGame {
         });
         Matter.Composite.add(this.world, body);
         const gfx = new PIXI.Graphics();
-        gfx.circle(0, 0, 10).fill(0xFFD700);
+        gfx.beginFill(0xFFD700).drawCircle(0, 0, 10).endFill();
         gfx.x = px * CONFIG.pxPerMeter;
         gfx.y = py * CONFIG.pxPerMeter;
         this.gameContainer.addChild(gfx);
@@ -672,8 +639,8 @@ class HillClimbGame {
       });
       Matter.Composite.add(this.world, body);
       const gfx = new PIXI.Graphics();
-      gfx.rect(-8, -10, 16, 20).fill(0x00CC00);
-      gfx.rect(-6, -12, 12, 4).fill(0x008800);
+      gfx.beginFill(0x00CC00).drawRect(-8, -10, 16, 20).endFill();
+      gfx.beginFill(0x008800).drawRect(-6, -12, 12, 4).endFill();
       gfx.x = px * CONFIG.pxPerMeter;
       gfx.y = py * CONFIG.pxPerMeter;
       this.gameContainer.addChild(gfx);
@@ -694,8 +661,8 @@ class HillClimbGame {
     Matter.Composite.add(this.world, body);
 
     const gfx = new PIXI.Graphics();
-    gfx.rect(-3, -120, 6, 120).fill(0x8B4513);
-    gfx.rect(-3, -120, 50, 30).fill({ color: 0xFFD700, alpha: 0.9 });
+    gfx.beginFill(0x8B4513).drawRect(-3, -120, 6, 120).endFill();
+    gfx.beginFill(0xFFD700, 0.9).drawRect(-3, -120, 50, 30).endFill();
     gfx.x = gx * CONFIG.pxPerMeter;
     gfx.y = gy * CONFIG.pxPerMeter + 120;
     this.gameContainer.addChild(gfx);
@@ -703,7 +670,7 @@ class HillClimbGame {
     this.goalData = { body, gfx, targetX: gx };
 
     const line = new PIXI.Graphics();
-    line.lineStyle(2, 0xFFD700, 0.5);
+    line.moveTo(0, 0);
     const pts = [];
     for (let y = -110; y <= 0; y += 10) {
       pts.push(Math.sin(y * 0.2) * 5, y);
@@ -712,6 +679,7 @@ class HillClimbGame {
       line.moveTo(pts[i], pts[i+1]);
       line.lineTo(pts[i+2], pts[i+3]);
     }
+    line.lineStyle(2, 0xFFD700, 0.5);
     line.x = gfx.x + 25;
     line.y = gy * CONFIG.pxPerMeter + 120;
     this.gameContainer.addChild(line);
@@ -803,7 +771,7 @@ class HillClimbGame {
     this.gameContainer.addChild(this.headGfx);
 
     const driverBody = new PIXI.Graphics();
-    driverBody.roundRect(-6, -14, 12, 14, 3).fill(0x3366CC);
+    driverBody.beginFill(0x3366CC).drawRoundedRect(-6, -14, 12, 14, 3).endFill();
     driverBody.zIndex = 10;
     driverBody._attached = true;
     this.gameContainer.addChild(driverBody);
@@ -817,8 +785,8 @@ class HillClimbGame {
     const b = body;
 
     this.carGfx.clear();
-    this.carGfx.roundRect(-30, -10, 60, 20, 4).fill(color);
-    this.carGfx.roundRect(-34, -6, 68, 12, 3).fill({ color: color, alpha: 0.4 });
+    this.carGfx.beginFill(color).drawRoundedRect(-30, -10, 60, 20, 4).endFill();
+    this.carGfx.beginFill(color, 0.4).drawRoundedRect(-34, -6, 68, 12, 3).endFill();
     this.carGfx.x = b.position.x * s;
     this.carGfx.y = b.position.y * s;
     this.carGfx.rotation = b.angle;
@@ -826,18 +794,18 @@ class HillClimbGame {
     [w1, w2].forEach((w, i) => {
       const g = this.wheelGfx[i];
       g.clear();
-      g.circle(0, 0, 10).fill(0x222222);
-      g.circle(0, 0, 5).fill(0x555555);
-      g.lineStyle(1.5, 0x888888);
+      g.beginFill(0x222222).drawCircle(0, 0, 10).endFill();
+      g.beginFill(0x555555).drawCircle(0, 0, 5).endFill();
       g.moveTo(0, -10); g.lineTo(0, 10);
       g.moveTo(-10, 0); g.lineTo(10, 0);
+      g.lineStyle(1.5, 0x888888);
       g.x = w.position.x * s;
       g.y = w.position.y * s;
       g.rotation = w.angle;
     });
 
     this.headGfx.clear();
-    this.headGfx.circle(0, 0, 7).fill(0xFFDBB4);
+    this.headGfx.beginFill(0xFFDBB4).drawCircle(0, 0, 7).endFill();
     this.headGfx.x = head.position.x * s;
     this.headGfx.y = head.position.y * s;
 
@@ -916,47 +884,35 @@ class HillClimbGame {
     this._gameUI = ui;
 
     const fuelBg = new PIXI.Graphics();
-    fuelBg.roundRect(0, 0, 180, 18, 9).fill({ color: 0x000000, alpha: 0.5 });
+    fuelBg.beginFill(0x000000, 0.5).drawRoundedRect(0, 0, 180, 18, 9).endFill();
     fuelBg.x = 12; fuelBg.y = 12;
     ui.addChild(fuelBg);
 
     this.fuelGfx = new PIXI.Graphics();
-    this.fuelGfx.roundRect(0, 0, 176, 14, 7).fill(0x00FF00);
+    this.fuelGfx.beginFill(0x00FF00).drawRoundedRect(0, 0, 176, 14, 7).endFill();
     this.fuelGfx.x = 14; this.fuelGfx.y = 14;
     ui.addChild(this.fuelGfx);
 
-    const fuelLabel = new PIXI.Text({
-      text: 'FUEL',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 9, fill: '#ffffff', fontWeight: 'bold' })
-    });
+    const fuelLabel = new PIXI.Text('FUEL', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 9, fill: '#ffffff', fontWeight: 'bold' }));
     fuelLabel.x = 14; fuelLabel.y = 33;
     ui.addChild(fuelLabel);
 
-    this.fuelWarn = new PIXI.Text({
-      text: 'LOW FUEL!',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 14, fill: '#ff4444', fontWeight: 'bold' })
-    });
+    this.fuelWarn = new PIXI.Text('LOW FUEL!', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 14, fill: '#ff4444', fontWeight: 'bold' }));
     this.fuelWarn.x = 14; this.fuelWarn.y = 46;
     this.fuelWarn.visible = false;
     ui.addChild(this.fuelWarn);
 
     const coinG = new PIXI.Graphics();
-    coinG.circle(0, 0, 9).fill(0xFFD700);
+    coinG.beginFill(0xFFD700).drawCircle(0, 0, 9).endFill();
     coinG.x = 14; coinG.y = 72;
     ui.addChild(coinG);
 
-    this.uiMoneyText = new PIXI.Text({
-      text: this.totalMoney.toString(),
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 16, fill: '#FFD700', fontWeight: 'bold' })
-    });
+    this.uiMoneyText = new PIXI.Text(this.totalMoney.toString(), new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 16, fill: '#FFD700', fontWeight: 'bold' }));
     this.uiMoneyText.x = 30; this.uiMoneyText.y = 63;
     ui.addChild(this.uiMoneyText);
 
     const stage = this.stages[this.stageIndex] || this.stages[0];
-    this.uiDistText = new PIXI.Text({
-      text: '0m / ' + stage.target + 'm',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 16, fill: '#ffffff', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 })
-    });
+    this.uiDistText = new PIXI.Text('0m / ' + stage.target + 'm', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 16, fill: '#ffffff', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }));
     this.uiDistText.anchor.set(0.5, 0);
     this.uiDistText.x = w / 2;
     this.uiDistText.y = 10;
@@ -968,7 +924,7 @@ class HillClimbGame {
     const brakeX = w - btnSize * 3 - 30;
 
     const gasBtn = new PIXI.Graphics();
-    gasBtn.circle(0, 0, btnSize).fill({ color: 0x00AA00, alpha: 0.65 });
+    gasBtn.beginFill(0x00AA00, 0.65).drawCircle(0, 0, btnSize).endFill();
     gasBtn.x = gasX; gasBtn.y = btnY;
     gasBtn.eventMode = 'static';
     gasBtn.cursor = 'pointer';
@@ -977,16 +933,13 @@ class HillClimbGame {
     gasBtn.on('pointerupoutside', () => { this.gasPressed = false; });
     ui.addChild(gasBtn);
 
-    const gasT = new PIXI.Text({
-      text: 'GAS',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 13, fill: '#ffffff', fontWeight: 'bold' })
-    });
+    const gasT = new PIXI.Text('GAS', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 13, fill: '#ffffff', fontWeight: 'bold' }));
     gasT.anchor.set(0.5, 0.5);
     gasT.x = gasX; gasT.y = btnY;
     ui.addChild(gasT);
 
     const brakeBtn = new PIXI.Graphics();
-    brakeBtn.circle(0, 0, btnSize).fill({ color: 0xCC0000, alpha: 0.65 });
+    brakeBtn.beginFill(0xCC0000, 0.65).drawCircle(0, 0, btnSize).endFill();
     brakeBtn.x = brakeX; brakeBtn.y = btnY;
     brakeBtn.eventMode = 'static';
     brakeBtn.cursor = 'pointer';
@@ -995,26 +948,20 @@ class HillClimbGame {
     brakeBtn.on('pointerupoutside', () => { this.brakePressed = false; });
     ui.addChild(brakeBtn);
 
-    const brakeT = new PIXI.Text({
-      text: 'BRAKE',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 11, fill: '#ffffff', fontWeight: 'bold' })
-    });
+    const brakeT = new PIXI.Text('BRAKE', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 11, fill: '#ffffff', fontWeight: 'bold' }));
     brakeT.anchor.set(0.5, 0.5);
     brakeT.x = brakeX; brakeT.y = btnY;
     ui.addChild(brakeT);
 
     const pauseBg = new PIXI.Graphics();
-    pauseBg.roundRect(0, 0, 36, 36, 6).fill({ color: 0x000000, alpha: 0.5 });
+    pauseBg.beginFill(0x000000, 0.5).drawRoundedRect(0, 0, 36, 36, 6).endFill();
     pauseBg.x = w - 46; pauseBg.y = 10;
     pauseBg.eventMode = 'static';
     pauseBg.cursor = 'pointer';
     pauseBg.on('pointerdown', () => this.togglePause());
     ui.addChild(pauseBg);
 
-    const pauseT = new PIXI.Text({
-      text: '| |',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 16, fill: '#ffffff', fontWeight: 'bold' })
-    });
+    const pauseT = new PIXI.Text('| |', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 16, fill: '#ffffff', fontWeight: 'bold' }));
     pauseT.anchor.set(0.5, 0.5);
     pauseT.x = w - 28; pauseT.y = 28;
     ui.addChild(pauseT);
@@ -1031,21 +978,18 @@ class HillClimbGame {
     this.uiContainer.addChild(this._pauseUI);
 
     const pOv = new PIXI.Graphics();
-    pOv.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.6 });
+    pOv.beginFill(0x000000, 0.6).drawRect(0, 0, w, h).endFill();
     pOv.eventMode = 'static';
     this._pauseUI.addChild(pOv);
 
     const pW = Math.min(300, w * 0.7);
     const pH = 320;
     const pBg = new PIXI.Graphics();
-    pBg.roundRect(0, 0, pW, pH, 16).fill(0x1a1a2e);
+    pBg.beginFill(0x1a1a2e).drawRoundedRect(0, 0, pW, pH, 16).endFill();
     pBg.x = w / 2 - pW / 2; pBg.y = h / 2 - pH / 2;
     this._pauseUI.addChild(pBg);
 
-    const pTitle = new PIXI.Text({
-      text: 'PAUSED',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 32, fill: '#ffffff', fontWeight: 'bold' })
-    });
+    const pTitle = new PIXI.Text('PAUSED', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 32, fill: '#ffffff', fontWeight: 'bold' }));
     pTitle.anchor.set(0.5, 0);
     pTitle.x = w / 2; pTitle.y = h / 2 - pH / 2 + 25;
     this._pauseUI.addChild(pTitle);
@@ -1061,7 +1005,7 @@ class HillClimbGame {
     this.uiContainer.addChild(this._gameOverUI);
 
     const gOv = new PIXI.Graphics();
-    gOv.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.8 });
+    gOv.beginFill(0x000000, 0.8).drawRect(0, 0, w, h).endFill();
     gOv.eventMode = 'static';
     gOv.on('pointerdown', () => {
       if (this.isDie && this._gameOverUI.visible) this.handleGameOverClick();
@@ -1071,38 +1015,26 @@ class HillClimbGame {
     const gW = Math.min(360, w * 0.85);
     const gH = 420;
     const gBg = new PIXI.Graphics();
-    gBg.roundRect(0, 0, gW, gH, 16).fill(0x1a1a2e);
+    gBg.beginFill(0x1a1a2e).drawRoundedRect(0, 0, gW, gH, 16).endFill();
     gBg.x = w / 2 - gW / 2; gBg.y = h / 2 - gH / 2;
     this._gameOverUI.addChild(gBg);
 
-    this._goTitle = new PIXI.Text({
-      text: 'GAME OVER',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 38, fill: '#FF4C4C', fontWeight: 'bold' })
-    });
+    this._goTitle = new PIXI.Text('GAME OVER', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 38, fill: '#FF4C4C', fontWeight: 'bold' }));
     this._goTitle.anchor.set(0.5, 0);
     this._goTitle.x = w / 2; this._goTitle.y = h / 2 - gH / 2 + 20;
     this._gameOverUI.addChild(this._goTitle);
 
-    this._goCoins = new PIXI.Text({
-      text: '+0 COINS',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 22, fill: '#FFD700', fontWeight: 'bold' })
-    });
+    this._goCoins = new PIXI.Text('+0 COINS', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 22, fill: '#FFD700', fontWeight: 'bold' }));
     this._goCoins.anchor.set(0.5, 0);
     this._goCoins.x = w / 2; this._goCoins.y = h / 2 - gH / 2 + 75;
     this._gameOverUI.addChild(this._goCoins);
 
-    this._goDist = new PIXI.Text({
-      text: 'Distance: 0m',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 18, fill: '#ffffff' })
-    });
+    this._goDist = new PIXI.Text('Distance: 0m', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 18, fill: '#ffffff' }));
     this._goDist.anchor.set(0.5, 0);
     this._goDist.x = w / 2; this._goDist.y = h / 2 - gH / 2 + 110;
     this._gameOverUI.addChild(this._goDist);
 
-    this._goBonus = new PIXI.Text({
-      text: '',
-      style: new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 16, fill: '#4CAF50' })
-    });
+    this._goBonus = new PIXI.Text('', new PIXI.TextStyle({ fontFamily: 'Arial', fontSize: 16, fill: '#4CAF50' }));
     this._goBonus.anchor.set(0.5, 0);
     this._goBonus.x = w / 2; this._goBonus.y = h / 2 - gH / 2 + 140;
     this._gameOverUI.addChild(this._goBonus);
@@ -1136,6 +1068,8 @@ class HillClimbGame {
     }
 
     if (this.scene !== 'game' || !this.vehicle) return;
+
+    Matter.Engine.update(this.engine, this.app.ticker.deltaMS);
 
     let movement = 0;
     if (this.gasPressed || this.keys['ArrowRight'] || this.keys['d']) {
@@ -1182,7 +1116,7 @@ class HillClimbGame {
     let color = 0x00FF00;
     if (pct <= 0.3) color = 0xFF0000;
     else if (pct <= 0.6) color = 0xFFAA00;
-    this.fuelGfx.roundRect(0, 0, 176 * pct, 14, 7).fill(color);
+    this.fuelGfx.beginFill(color).drawRoundedRect(0, 0, 176 * pct, 14, 7).endFill();
 
     if (pct <= 0.3 && pct > 0) {
       this.fuelWarn.visible = true;
@@ -1209,8 +1143,8 @@ class HillClimbGame {
     const color = [0xFF4444, 0x4488FF, 0x44BB44, 0xFF8800][this.vehicleIndex % 4];
 
     this.carGfx.clear();
-    this.carGfx.roundRect(-30, -10, 60, 20, 4).fill(color);
-    this.carGfx.roundRect(-34, -6, 68, 12, 3).fill({ color, alpha: 0.4 });
+    this.carGfx.beginFill(color).drawRoundedRect(-30, -10, 60, 20, 4).endFill();
+    this.carGfx.beginFill(color, 0.4).drawRoundedRect(-34, -6, 68, 12, 3).endFill();
     this.carGfx.x = body.position.x * s;
     this.carGfx.y = body.position.y * s;
     this.carGfx.rotation = body.angle;
@@ -1220,18 +1154,18 @@ class HillClimbGame {
       const g = this.wheelGfx[i];
       if (!g) return;
       g.clear();
-      g.circle(0, 0, 10).fill(0x222222);
-      g.circle(0, 0, 5).fill(0x555555);
-      g.lineStyle(1.5, 0x888888);
+      g.beginFill(0x222222).drawCircle(0, 0, 10).endFill();
+      g.beginFill(0x555555).drawCircle(0, 0, 5).endFill();
       g.moveTo(0, -10); g.lineTo(0, 10);
       g.moveTo(-10, 0); g.lineTo(10, 0);
+      g.lineStyle(1.5, 0x888888);
       g.x = w.position.x * s;
       g.y = w.position.y * s;
       g.rotation = w.angle;
     });
 
     this.headGfx.clear();
-    this.headGfx.circle(0, 0, 7).fill(0xFFDBB4);
+    this.headGfx.beginFill(0xFFDBB4).drawCircle(0, 0, 7).endFill();
     this.headGfx.x = head.position.x * s;
     this.headGfx.y = head.position.y * s;
 
@@ -1289,11 +1223,12 @@ class HillClimbGame {
 
         if (nextIdx < this.stages.length) {
           this._nextStageBtn.visible = true;
-          this._nextStageBtn.label = 'NEXT STAGE';
+          const t = this._nextStageBtn.children.find(c => c instanceof PIXI.Text);
+          if (t) t.text = 'NEXT STAGE';
         } else {
+          const t = this._nextStageBtn.children.find(c => c instanceof PIXI.Text);
+          if (t) t.text = 'ALL STAGES CLEARED!';
           this._nextStageBtn.visible = true;
-          this._nextStageBtn.label = 'ALL STAGES CLEARED!';
-          this._nextStageBtn.visible = false;
         }
 
         SFX.play('purchase');
