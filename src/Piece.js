@@ -3,10 +3,10 @@ import Matter from 'matter-js';
 import { CELL_SIZE, COLORS, PIECE_AREA_Y, GAME_WIDTH } from './constants.js';
 
 const BLOCK_TEXTURE_KEYS = [
-  'IMG_20260620_222425-removed-bg.png',
-  'IMG_20260620_222444-removed-bg.png',
-  'IMG_20260620_222509-removed-bg.png',
-  'IMG_20260620_222522-removed-bg.png',
+  'block_1-removed-bg.png',
+  'block_2-removed-bg.png',
+  'block_3-removed-bg.png',
+  'block_4-removed-bg.png',
 ];
 
 export class Piece {

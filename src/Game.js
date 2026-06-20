@@ -38,10 +38,10 @@ export class Game {
     const assets = [
       'grid_8x8_board-removed-bg.png',
       'ui_play_button-removed-bg.png',
-      'IMG_20260620_222425-removed-bg.png',
-      'IMG_20260620_222444-removed-bg.png',
-      'IMG_20260620_222509-removed-bg.png',
-      'IMG_20260620_222522-removed-bg.png',
+      'block_1-removed-bg.png',
+      'block_2-removed-bg.png',
+      'block_3-removed-bg.png',
+      'block_4-removed-bg.png',
     ];
 
     for (const name of assets) {
@@ -457,10 +457,10 @@ export class Game {
 
   _updateGridVisual() {
     const blockTexKeys = [
-      'IMG_20260620_222425-removed-bg.png',
-      'IMG_20260620_222444-removed-bg.png',
-      'IMG_20260620_222509-removed-bg.png',
-      'IMG_20260620_222522-removed-bg.png',
+      'block_1-removed-bg.png',
+      'block_2-removed-bg.png',
+      'block_3-removed-bg.png',
+      'block_4-removed-bg.png',
     ];
 
     for (let r = 0; r < GRID_SIZE; r++) {
