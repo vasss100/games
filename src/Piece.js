@@ -1,21 +1,12 @@
 import * as PIXI from 'pixi.js';
-import Matter from 'matter-js';
 import { CELL_SIZE, COLORS } from './constants.js';
 
-const BLOCK_TEXTURE_KEYS = [
-  '1-removed-bg.png',
-  '2-removed-bg.png',
-  '3-removed-bg.png',
-  '4-removed-bg.png',
-];
-
 export class Piece {
-  constructor(shapeMatrix, colorIndex, grid, textures) {
+  constructor(shapeMatrix, colorIndex, grid) {
     this.shapeMatrix = shapeMatrix;
     this.colorIndex = colorIndex;
     this.color = COLORS.cellOccupied[colorIndex % COLORS.cellOccupied.length];
     this.grid = grid;
-    this.textures = textures || {};
     this.placed = false;
     this.dragging = false;
     this.dragOffset = { x: 0, y: 0 };
@@ -30,17 +21,9 @@ export class Piece {
 
     this._createGraphics();
     this._createGhost();
-    this._createBody();
-  }
-
-  _getBlockTexture() {
-    const key = BLOCK_TEXTURE_KEYS[this.colorIndex % BLOCK_TEXTURE_KEYS.length];
-    return this.textures[key] || null;
   }
 
   _createGraphics() {
-    const blockTex = this._getBlockTexture();
-
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
         if (!this.shapeMatrix[r][c]) continue;
@@ -56,15 +39,11 @@ export class Piece {
         g.endFill();
         cell.addChild(g);
 
-        if (blockTex) {
-          const sprite = new PIXI.Sprite(blockTex);
-          sprite.x = x + 2;
-          sprite.y = y + 2;
-          sprite.width = CELL_SIZE - 4;
-          sprite.height = CELL_SIZE - 4;
-          sprite.alpha = 0.5;
-          cell.addChild(sprite);
-        }
+        const shine = new PIXI.Graphics();
+        shine.beginFill(0xffffff, 0.15);
+        shine.drawRoundedRect(x + inset + 2, y + inset + 2, CELL_SIZE - inset * 2 - 8, (CELL_SIZE - inset * 2) / 3, 3);
+        shine.endFill();
+        cell.addChild(shine);
 
         this.container.addChild(cell);
       }
@@ -89,34 +68,9 @@ export class Piece {
     }
   }
 
-  _createBody() {
-    const vertices = [];
-    for (let r = 0; r < this.rows; r++) {
-      for (let c = 0; c < this.cols; c++) {
-        if (!this.shapeMatrix[r][c]) continue;
-        const hw = CELL_SIZE / 2 - 2;
-        const cx = c * CELL_SIZE + CELL_SIZE / 2;
-        const cy = r * CELL_SIZE + CELL_SIZE / 2;
-        vertices.push({ x: cx - hw, y: cy - hw }, { x: cx + hw, y: cy - hw },
-                      { x: cx + hw, y: cy + hw }, { x: cx - hw, y: cy + hw });
-      }
-    }
-    const centroid = Matter.Vertices.centre(vertices);
-    const bodyVerts = vertices.map(v => ({ x: v.x - centroid.x, y: v.y - centroid.y }));
-    try {
-      this.body = Matter.Bodies.fromVertices(0, 0, bodyVerts, {
-        isStatic: false, restitution: 0.1, friction: 0.1, frictionAir: 0.05,
-      });
-      if (this.body) { this.body.pieceRef = this; this.body.isSensor = true; }
-    } catch (e) { this.body = null; }
-  }
-
   setPosition(x, y) {
     this.container.x = x;
     this.container.y = y;
-    if (this.body) {
-      Matter.Body.setPosition(this.body, { x: x + this.visualWidth / 2, y: y + this.visualHeight / 2 });
-    }
   }
 
   get visualWidth() { return this.cols * CELL_SIZE; }
@@ -137,9 +91,8 @@ export class Piece {
       return;
     }
 
-    const x = grid.x + gridY * CELL_SIZE;
-    const y = grid.y + gridX * CELL_SIZE;
-
+    const x = this.grid.x + gridY * CELL_SIZE;
+    const y = this.grid.y + gridX * CELL_SIZE;
     const lineColor = canPlace ? 0x00ff00 : 0xff4444;
     const fillColor = canPlace ? 0x00ff00 : 0xff4444;
 

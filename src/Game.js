@@ -1,157 +1,144 @@
 import * as PIXI from 'pixi.js';
-import Matter from 'matter-js';
 import { Grid } from './Grid.js';
 import { Piece } from './Piece.js';
+import { Effects } from './Effects.js';
 import {
   GRID_SIZE, CELL_SIZE, BOARD_OFFSET_X, BOARD_OFFSET_Y,
   PIECE_AREA_Y, COLORS, GAME_WIDTH, GAME_HEIGHT,
-  PIECE_SHAPES, NUM_PIECES_PER_TURN,
+  getShapesForLevel, NUM_PIECES_PER_TURN, MAX_LEVEL,
+  getTheme, getScoreForLevel,
 } from './constants.js';
 
 export class Game {
-  constructor(app, engine, mouseConstraint) {
+  constructor(app, engine) {
     this.app = app;
     this.engine = engine;
-    this.mouseConstraint = mouseConstraint;
     this.state = 'menu';
     this.score = 0;
+    this.level = 1;
     this.highScore = parseInt(localStorage.getItem('blockblast_highscore') || '0');
+    this.highLevel = parseInt(localStorage.getItem('blockblast_highlevel') || '1');
     this.grid = new Grid();
     this.pieces = [];
     this.activePieceIndex = -1;
     this.dragStart = { x: 0, y: 0 };
     this.isDragging = false;
     this.isGameOver = false;
-    this.textures = {};
+    this.currentTheme = getTheme(1);
 
     this.container = new PIXI.Container();
     app.stage.addChild(this.container);
 
-    this._loadTextures();
+    this.effects = new Effects(this.container);
     this._createBackground();
     this._createGridUI();
     this._createUI();
     this._createMenu();
     this._createGameOver();
     this._setupInteraction();
-  }
-
-  _loadTextures() {
-    const assets = [
-      'grid_8x8_board-removed-bg.png',
-      'ui_play_button-removed-bg.png',
-      '1-removed-bg.png',
-      '2-removed-bg.png',
-      '3-removed-bg.png',
-      '4-removed-bg.png',
-    ];
-
-    for (const name of assets) {
-      try {
-        this.textures[name] = PIXI.Texture.from(name);
-      } catch (e) {
-        // texture not available, will use fallback rendering
-      }
-    }
+    this._applyTheme();
   }
 
   _createBackground() {
-    const bg = new PIXI.Graphics();
-    bg.beginFill(COLORS.background);
-    bg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    bg.endFill();
-    this.container.addChild(bg);
+    this.bgGraphics = new PIXI.Graphics();
+    this.container.addChild(this.bgGraphics);
 
-    const boardTex = this.textures['grid_8x8_board-removed-bg.png'];
-    if (boardTex) {
-      const boardSprite = new PIXI.Sprite(boardTex);
-      boardSprite.x = BOARD_OFFSET_X - 8;
-      boardSprite.y = BOARD_OFFSET_Y - 8;
-      boardSprite.width = GRID_SIZE * CELL_SIZE + 16;
-      boardSprite.height = GRID_SIZE * CELL_SIZE + 16;
-      boardSprite.alpha = 0.15;
-      this.container.addChild(boardSprite);
-    }
+    this.boardDecor = new PIXI.Graphics();
+    this.container.addChild(this.boardDecor);
   }
 
   _createGridUI() {
     this.gridContainer = new PIXI.Container();
     this.container.addChild(this.gridContainer);
 
-    const boardBg = new PIXI.Graphics();
-    boardBg.beginFill(COLORS.boardBg, 0.8);
-    boardBg.drawRoundedRect(
-      BOARD_OFFSET_X - 4, BOARD_OFFSET_Y - 4,
-      GRID_SIZE * CELL_SIZE + 8, GRID_SIZE * CELL_SIZE + 8,
-      8
-    );
-    boardBg.endFill();
-    this.gridContainer.addChild(boardBg);
+    this.boardBg = new PIXI.Graphics();
+    this.gridContainer.addChild(this.boardBg);
 
     this.cellGraphics = [];
     for (let r = 0; r < GRID_SIZE; r++) {
       this.cellGraphics[r] = [];
       for (let c = 0; c < GRID_SIZE; c++) {
         const g = new PIXI.Graphics();
-        const x = BOARD_OFFSET_X + c * CELL_SIZE;
-        const y = BOARD_OFFSET_Y + r * CELL_SIZE;
-        g.lineStyle(1, COLORS.gridLine, 0.4);
-        g.beginFill(COLORS.cellEmpty);
-        g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 3);
-        g.endFill();
         this.gridContainer.addChild(g);
         this.cellGraphics[r][c] = g;
       }
     }
 
-    const border = new PIXI.Graphics();
-    border.lineStyle(2, COLORS.gridBorder, 0.8);
-    border.drawRoundedRect(
-      BOARD_OFFSET_X, BOARD_OFFSET_Y,
-      GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE,
-      6
-    );
-    this.gridContainer.addChild(border);
+    this.gridBorder = new PIXI.Graphics();
+    this.gridContainer.addChild(this.gridBorder);
   }
 
   _createUI() {
     this.scoreText = new PIXI.Text('Score: 0', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: 22,
-      fill: COLORS.titleColor,
-      fontWeight: 'bold',
-      stroke: 0x000000,
-      strokeThickness: 2,
+      fontFamily: 'Arial, sans-serif', fontSize: 20,
+      fill: COLORS.uiText, fontWeight: 'bold',
+      stroke: 0x000000, strokeThickness: 2,
     });
     this.scoreText.x = BOARD_OFFSET_X;
-    this.scoreText.y = 15;
+    this.scoreText.y = 12;
     this.container.addChild(this.scoreText);
 
     this.highScoreText = new PIXI.Text(`Best: ${this.highScore}`, {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: 16,
+      fontFamily: 'Arial, sans-serif', fontSize: 14,
       fill: COLORS.uiText,
     });
-    this.highScoreText.alpha = 0.7;
-    this.highScoreText.x = GAME_WIDTH - BOARD_OFFSET_X - 80;
-    this.highScoreText.y = 18;
+    this.highScoreText.alpha = 0.6;
+    this.highScoreText.x = BOARD_OFFSET_X;
+    this.highScoreText.y = 36;
     this.container.addChild(this.highScoreText);
 
+    this.levelText = new PIXI.Text('LV.1', {
+      fontFamily: 'Arial, sans-serif', fontSize: 18,
+      fill: COLORS.uiAccent, fontWeight: 'bold',
+      stroke: 0x000000, strokeThickness: 2,
+    });
+    this.levelText.x = GAME_WIDTH - BOARD_OFFSET_X - 80;
+    this.levelText.y = 12;
+    this.container.addChild(this.levelText);
+
+    this.progressBg = new PIXI.Graphics();
+    this.progressBg.beginFill(0x000000, 0.4);
+    this.progressBg.drawRoundedRect(GAME_WIDTH - BOARD_OFFSET_X - 80, 34, 72, 10, 5);
+    this.progressBg.endFill();
+    this.container.addChild(this.progressBg);
+
+    this.progressBar = new PIXI.Graphics();
+    this.progressBar.x = GAME_WIDTH - BOARD_OFFSET_X - 80;
+    this.progressBar.y = 34;
+    this.container.addChild(this.progressBar);
+
+    this.progressText = new PIXI.Text('', {
+      fontFamily: 'Arial, sans-serif', fontSize: 9,
+      fill: 0xffffff,
+    });
+    this.progressText.x = GAME_WIDTH - BOARD_OFFSET_X - 44;
+    this.progressText.y = 35;
+    this.progressText.anchor.set(0.5, 0);
+    this.container.addChild(this.progressText);
+
     this.restartBtn = new PIXI.Text('↻', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: 28,
+      fontFamily: 'Arial, sans-serif', fontSize: 26,
       fill: COLORS.uiAccent,
     });
-    this.restartBtn.x = GAME_WIDTH - 40;
-    this.restartBtn.y = 12;
+    this.restartBtn.x = GAME_WIDTH - 34;
+    this.restartBtn.y = 10;
     this.restartBtn.eventMode = 'static';
     this.restartBtn.cursor = 'pointer';
     this.restartBtn.on('pointerdown', () => {
-      if (this.state === 'playing' && !this.isGameOver) {
-        this.startGame();
-      }
+      if (this.state === 'playing' && !this.isGameOver) this.startGame();
     });
     this.container.addChild(this.restartBtn);
+
+    this.comboText = new PIXI.Text('', {
+      fontFamily: 'Arial, sans-serif', fontSize: 36,
+      fill: 0xFFD54F, fontWeight: 'bold',
+      stroke: 0x000000, strokeThickness: 4,
+    });
+    this.comboText.anchor.set(0.5);
+    this.comboText.x = GAME_WIDTH / 2;
+    this.comboText.y = BOARD_OFFSET_Y + GRID_SIZE * CELL_SIZE + 30;
+    this.comboText.alpha = 0;
+    this.container.addChild(this.comboText);
 
     this.piecesContainer = new PIXI.Container();
     this.container.addChild(this.piecesContainer);
@@ -163,52 +150,80 @@ export class Game {
     this.container.addChild(this.menuContainer);
 
     const overlay = new PIXI.Graphics();
-    overlay.beginFill(0x000000, 0.7);
+    overlay.beginFill(0x000000, 0.75);
     overlay.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     overlay.endFill();
     this.menuContainer.addChild(overlay);
 
-    const title = new PIXI.Text('BLOCK BLAST', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: 48,
-      fill: COLORS.titleColor,
-      fontWeight: 'bold',
-      stroke: 0x000000,
-      strokeThickness: 4,
+    this.menuTitle = new PIXI.Text('BLOCK BLAST', {
+      fontFamily: 'Arial, sans-serif', fontSize: 48,
+      fill: COLORS.titleColor, fontWeight: 'bold',
+      stroke: 0x000000, strokeThickness: 4,
     });
-    title.anchor.set(0.5);
-    title.x = GAME_WIDTH / 2;
-    title.y = GAME_HEIGHT / 2 - 100;
-    this.menuContainer.addChild(title);
+    this.menuTitle.anchor.set(0.5);
+    this.menuTitle.x = GAME_WIDTH / 2;
+    this.menuTitle.y = GAME_HEIGHT / 2 - 120;
+    this.menuContainer.addChild(this.menuTitle);
 
-    const btnTex = this.textures['ui_play_button-removed-bg.png'];
-    let playBtn;
-    if (btnTex) {
-      playBtn = new PIXI.Sprite(btnTex);
-      playBtn.anchor.set(0.5);
-      playBtn.scale.set(0.8);
-    } else {
-      playBtn = new PIXI.Graphics();
-      playBtn.beginFill(COLORS.uiAccent);
-      playBtn.drawRoundedRect(-70, -25, 140, 50, 12);
-      playBtn.endFill();
+    const subtitle = new PIXI.Text('500 LEVELS OF PUZZLE FUN', {
+      fontFamily: 'Arial, sans-serif', fontSize: 14,
+      fill: 0x888888, letterSpacing: 4,
+    });
+    subtitle.anchor.set(0.5);
+    subtitle.x = GAME_WIDTH / 2;
+    subtitle.y = GAME_HEIGHT / 2 - 80;
+    this.menuContainer.addChild(subtitle);
 
-      const playText = new PIXI.Text('PLAY', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: 24,
-        fill: 0xffffff,
-        fontWeight: 'bold',
-      });
-      playText.anchor.set(0.5);
-      playBtn.addChild(playText);
-    }
-    playBtn.x = GAME_WIDTH / 2;
-    playBtn.y = GAME_HEIGHT / 2 + 20;
-    playBtn.eventMode = 'static';
-    playBtn.cursor = 'pointer';
-    this.menuContainer.addChild(playBtn);
+    const playBg = new PIXI.Graphics();
+    playBg.beginFill(COLORS.uiAccent, 0.15);
+    playBg.drawRoundedRect(GAME_WIDTH / 2 - 85, GAME_HEIGHT / 2 - 40, 170, 55, 14);
+    playBg.endFill();
+    this.menuContainer.addChild(playBg);
 
-    playBtn.on('pointerdown', () => this.startGame());
+    this.playBtn = new PIXI.Graphics();
+    this.playBtn.beginFill(COLORS.uiAccent);
+    this.playBtn.drawRoundedRect(-75, -22, 150, 44, 10);
+    this.playBtn.endFill();
+    this.playBtn.x = GAME_WIDTH / 2;
+    this.playBtn.y = GAME_HEIGHT / 2 - 13;
+    this.playBtn.eventMode = 'static';
+    this.playBtn.cursor = 'pointer';
+    this.menuContainer.addChild(this.playBtn);
+
+    const playText = new PIXI.Text('PLAY', {
+      fontFamily: 'Arial, sans-serif', fontSize: 22,
+      fill: 0xffffff, fontWeight: 'bold',
+    });
+    playText.anchor.set(0.5);
+    playText.x = 0;
+    playText.y = 0;
+    this.playBtn.addChild(playText);
+
+    this.playBtn.on('pointerdown', () => this.startGame());
+    this.playBtn.on('pointerover', () => {
+      this.playBtn.tint = 0xcccccc;
+    });
+    this.playBtn.on('pointerout', () => {
+      this.playBtn.tint = 0xffffff;
+    });
+
+    const menuHighScore = new PIXI.Text(`High Score: ${this.highScore}`, {
+      fontFamily: 'Arial, sans-serif', fontSize: 14,
+      fill: 0x888888,
+    });
+    menuHighScore.anchor.set(0.5);
+    menuHighScore.x = GAME_WIDTH / 2;
+    menuHighScore.y = GAME_HEIGHT / 2 + 40;
+    this.menuContainer.addChild(menuHighScore);
+
+    const menuHighLevel = new PIXI.Text(`Highest Level: ${this.highLevel}`, {
+      fontFamily: 'Arial, sans-serif', fontSize: 14,
+      fill: 0x888888,
+    });
+    menuHighLevel.anchor.set(0.5);
+    menuHighLevel.x = GAME_WIDTH / 2;
+    menuHighLevel.y = GAME_HEIGHT / 2 + 62;
+    this.menuContainer.addChild(menuHighLevel);
   }
 
   _createGameOver() {
@@ -217,49 +232,61 @@ export class Game {
     this.container.addChild(this.gameOverContainer);
 
     const overlay = new PIXI.Graphics();
-    overlay.beginFill(0x000000, 0.7);
+    overlay.beginFill(0x000000, 0.75);
     overlay.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     overlay.endFill();
     this.gameOverContainer.addChild(overlay);
 
     const goTitle = new PIXI.Text('GAME OVER', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: 42,
-      fill: 0xff4444,
-      fontWeight: 'bold',
-      stroke: 0x000000,
-      strokeThickness: 4,
+      fontFamily: 'Arial, sans-serif', fontSize: 42,
+      fill: 0xff4444, fontWeight: 'bold',
+      stroke: 0x000000, strokeThickness: 4,
     });
     goTitle.anchor.set(0.5);
     goTitle.x = GAME_WIDTH / 2;
-    goTitle.y = GAME_HEIGHT / 2 - 100;
+    goTitle.y = GAME_HEIGHT / 2 - 120;
     this.gameOverContainer.addChild(goTitle);
 
     this.finalScoreText = new PIXI.Text('Score: 0', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: 28,
+      fontFamily: 'Arial, sans-serif', fontSize: 28,
       fill: 0xffffff,
     });
     this.finalScoreText.anchor.set(0.5);
     this.finalScoreText.x = GAME_WIDTH / 2;
-    this.finalScoreText.y = GAME_HEIGHT / 2 - 40;
+    this.finalScoreText.y = GAME_HEIGHT / 2 - 60;
     this.gameOverContainer.addChild(this.finalScoreText);
+
+    this.finalLevelText = new PIXI.Text('Level: 1', {
+      fontFamily: 'Arial, sans-serif', fontSize: 22,
+      fill: COLORS.uiAccent,
+    });
+    this.finalLevelText.anchor.set(0.5);
+    this.finalLevelText.x = GAME_WIDTH / 2;
+    this.finalLevelText.y = GAME_HEIGHT / 2 - 25;
+    this.gameOverContainer.addChild(this.finalLevelText);
+
+    this.bestScoreText = new PIXI.Text('', {
+      fontFamily: 'Arial, sans-serif', fontSize: 16,
+      fill: 0xFFD54F,
+    });
+    this.bestScoreText.anchor.set(0.5);
+    this.bestScoreText.x = GAME_WIDTH / 2;
+    this.bestScoreText.y = GAME_HEIGHT / 2 + 5;
+    this.gameOverContainer.addChild(this.bestScoreText);
 
     const retryBtn = new PIXI.Graphics();
     retryBtn.beginFill(COLORS.uiAccent);
-    retryBtn.drawRoundedRect(-80, -25, 160, 50, 12);
+    retryBtn.drawRoundedRect(-85, -22, 170, 44, 10);
     retryBtn.endFill();
     retryBtn.x = GAME_WIDTH / 2;
-    retryBtn.y = GAME_HEIGHT / 2 + 40;
+    retryBtn.y = GAME_HEIGHT / 2 + 60;
     retryBtn.eventMode = 'static';
     retryBtn.cursor = 'pointer';
     this.gameOverContainer.addChild(retryBtn);
 
     const retryText = new PIXI.Text('PLAY AGAIN', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: 22,
-      fill: 0xffffff,
-      fontWeight: 'bold',
+      fontFamily: 'Arial, sans-serif', fontSize: 20,
+      fill: 0xffffff, fontWeight: 'bold',
     });
     retryText.anchor.set(0.5);
     retryText.x = 0;
@@ -267,16 +294,77 @@ export class Game {
     retryBtn.addChild(retryText);
 
     retryBtn.on('pointerdown', () => this.startGame());
+    retryBtn.on('pointerover', () => { retryBtn.tint = 0xcccccc; });
+    retryBtn.on('pointerout', () => { retryBtn.tint = 0xffffff; });
   }
 
   _setupInteraction() {
     this.container.eventMode = 'static';
     this.container.hitArea = new PIXI.Rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
     this.container.on('pointerdown', (e) => this._onPointerDown(e));
     this.container.on('pointermove', (e) => this._onPointerMove(e));
     this.container.on('pointerup', (e) => this._onPointerUp(e));
     this.container.on('pointerupoutside', (e) => this._onPointerUp(e));
+  }
+
+  _applyTheme() {
+    const theme = this.currentTheme;
+    this.bgGraphics.clear();
+    this.bgGraphics.beginFill(theme.background);
+    this.bgGraphics.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.bgGraphics.endFill();
+
+    const gradHeight = 200;
+    for (let i = 0; i < gradHeight; i++) {
+      const a = ((gradHeight - i) / gradHeight) * 0.08;
+      this.bgGraphics.beginFill(theme.accent, a);
+      this.bgGraphics.drawRect(0, i, GAME_WIDTH, 1);
+      this.bgGraphics.endFill();
+    }
+
+    this.boardDecor.clear();
+    this.boardDecor.beginFill(theme.accent, 0.05);
+    this.boardDecor.drawRoundedRect(
+      BOARD_OFFSET_X - 8, BOARD_OFFSET_Y - 8,
+      GRID_SIZE * CELL_SIZE + 16, GRID_SIZE * CELL_SIZE + 16, 12
+    );
+    this.boardDecor.endFill();
+
+    this.boardBg.clear();
+    this.boardBg.beginFill(theme.boardBg, 0.9);
+    this.boardBg.drawRoundedRect(
+      BOARD_OFFSET_X - 4, BOARD_OFFSET_Y - 4,
+      GRID_SIZE * CELL_SIZE + 8, GRID_SIZE * CELL_SIZE + 8, 8
+    );
+    this.boardBg.endFill();
+
+    this.gridBorder.clear();
+    this.gridBorder.lineStyle(2, theme.accent, 0.6);
+    this.gridBorder.drawRoundedRect(
+      BOARD_OFFSET_X, BOARD_OFFSET_Y,
+      GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE, 6
+    );
+
+    this.levelText.style.fill = theme.accent;
+    this.restartBtn.style.fill = theme.accent;
+
+    if (this.menuTitle) {
+      this.menuTitle.style.fill = theme.accent;
+    }
+  }
+
+  _updateProgressBar() {
+    const needed = getScoreForLevel(this.level);
+    const prevNeeded = this.level > 1 ? getScoreForLevel(this.level - 1) : 0;
+    const progress = Math.min(1, (this.score - prevNeeded) / (needed - prevNeeded));
+
+    this.progressBar.clear();
+    this.progressBar.beginFill(this.currentTheme.accent, 0.8);
+    this.progressBar.drawRoundedRect(0, 0, 72 * progress, 10, 5);
+    this.progressBar.endFill();
+
+    const remaining = Math.max(0, needed - this.score);
+    this.progressText.text = `${remaining}`;
   }
 
   _onPointerDown(e) {
@@ -284,7 +372,6 @@ export class Game {
     if (this.isDragging) return;
 
     const pos = e.global;
-
     for (let i = this.pieces.length - 1; i >= 0; i--) {
       const piece = this.pieces[i];
       if (!piece || piece.placed) continue;
@@ -292,13 +379,10 @@ export class Game {
         this.activePieceIndex = i;
         this.isDragging = true;
         piece.dragging = true;
-
         this.dragStart.x = pos.x - piece.container.x;
         this.dragStart.y = pos.y - piece.container.y;
-
         this.piecesContainer.removeChild(piece.container);
         this.piecesContainer.addChild(piece.container);
-
         if (piece.ghostContainer.parent) this.piecesContainer.removeChild(piece.ghostContainer);
         this.piecesContainer.addChild(piece.ghostContainer);
         break;
@@ -308,19 +392,10 @@ export class Game {
 
   _onPointerMove(e) {
     if (!this.isDragging || this.activePieceIndex < 0) return;
-
     const piece = this.pieces[this.activePieceIndex];
     const pos = e.global;
-
     piece.container.x = pos.x - this.dragStart.x;
     piece.container.y = pos.y - this.dragStart.y;
-
-    if (piece.body) {
-      Matter.Body.setPosition(piece.body, {
-        x: piece.container.x + piece.visualWidth / 2,
-        y: piece.container.y + piece.visualHeight / 2,
-      });
-    }
 
     const cx = piece.container.x + piece.visualWidth / 2;
     const cy = piece.container.y + piece.visualHeight / 2;
@@ -340,7 +415,6 @@ export class Game {
     const piece = this.pieces[this.activePieceIndex];
     piece.dragging = false;
     this.isDragging = false;
-
     piece.hideGhost();
     piece.ghostContainer.removeChildren();
 
@@ -351,37 +425,58 @@ export class Game {
 
       const cx = BOARD_OFFSET_X + bestPos.col * CELL_SIZE;
       const cy = BOARD_OFFSET_Y + bestPos.row * CELL_SIZE;
+      const centerX = cx + (piece.cols * CELL_SIZE) / 2;
+      const centerY = cy + (piece.rows * CELL_SIZE) / 2;
 
-      this.animatePiecePlace(piece, cx, cy);
+      this.effects.emitParticles(centerX, centerY, piece.color, 10, 3, 3, 25);
+      this._animatePiecePlace(piece, cx, cy);
       this._updateGridVisual();
 
       const cellsPlaced = piece.shapeMatrix.flat().filter(Boolean).length;
       this.score += cellsPlaced;
 
+      this.effects.showFloatingText(centerX, centerY - 10, `+${cellsPlaced}`, piece.color, 20);
+
       const { rows, cols } = this.grid.getCompletedLines();
       if (rows.length > 0 || cols.length > 0) {
         const cleared = rows.length + cols.length;
-
         let lineScore = 0;
-        for (let i = 1; i <= cleared; i++) {
-          lineScore += i * 10;
-        }
+        for (let i = 1; i <= cleared; i++) lineScore += i * 10;
         this.score += lineScore;
 
-        this.animateLineClear(rows, cols);
+        const boardCX = BOARD_OFFSET_X + (GRID_SIZE * CELL_SIZE) / 2;
+        const boardCY = BOARD_OFFSET_Y + (GRID_SIZE * CELL_SIZE) / 2;
+
+        if (cleared >= 3) {
+          this.effects.emitBurst(boardCX, boardCY, 0xFFD54F, 3);
+          this.effects.screenShake(10, 500);
+          this._showCombo(`${cleared}x COMBO!`, 0xFFD54F);
+        } else if (cleared >= 2) {
+          this.effects.emitBurst(boardCX, boardCY, 0xffffff, 2);
+          this.effects.screenShake(6, 300);
+          this._showCombo('NICE!', 0x4FC3F7);
+        } else {
+          this.effects.screenShake(3, 150);
+        }
+
+        this.effects.emitLineClear(
+          rows, cols, 0xffffff, CELL_SIZE,
+          BOARD_OFFSET_X, BOARD_OFFSET_Y, GRID_SIZE
+        );
+        this.effects.showFloatingText(boardCX, boardCY, `+${lineScore}`, 0xFFD54F, 28);
+
+        this._animateLineClear(rows, cols);
         this.grid.clearLines(rows, cols);
         this._updateGridVisual();
       }
 
       piece.placed = true;
-      if (piece.body && this.engine) {
-        Matter.Composite.remove(this.engine.world, piece.body);
-      }
       this.piecesContainer.removeChild(piece.container);
       if (piece.ghostContainer.parent) this.piecesContainer.removeChild(piece.ghostContainer);
 
       const placedCount = this.pieces.filter(p => p.placed).length;
       if (placedCount === this.pieces.length) {
+        this._checkLevelUp();
         this.spawnPieces();
       }
 
@@ -393,32 +488,49 @@ export class Game {
     this.activePieceIndex = -1;
   }
 
-  animatePiecePlace(piece, targetX, targetY) {
-    piece.setPosition(targetX, targetY);
+  _showCombo(text, color) {
+    this.comboText.text = text;
+    this.comboText.style.fill = color;
+    this.comboText.alpha = 1;
+    this.comboText.scale.set(0.5);
 
+    let frame = 0;
+    const animate = () => {
+      frame++;
+      this.comboText.scale.set(Math.min(1.2, 0.5 + frame * 0.07));
+      if (frame > 50) {
+        this.comboText.alpha -= 0.03;
+        if (this.comboText.alpha <= 0) return;
+      }
+      this.app.ticker.addOnce(animate);
+    };
+    this.app.ticker.addOnce(animate);
+  }
+
+  _animatePiecePlace(piece, targetX, targetY) {
+    piece.setPosition(targetX, targetY);
     const g = new PIXI.Graphics();
     for (let r = 0; r < piece.rows; r++) {
       for (let c = 0; c < piece.cols; c++) {
         if (!piece.shapeMatrix[r][c]) continue;
         const x = targetX + c * CELL_SIZE;
         const y = targetY + r * CELL_SIZE;
-        g.beginFill(piece.color, 0.6);
+        g.beginFill(piece.color, 0.5);
         g.drawRoundedRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, 6);
         g.endFill();
       }
     }
     g.alpha = 0;
     this.gridContainer.addChild(g);
-
     let frame = 0;
     const animate = () => {
       if (this.isGameOver || this.state !== 'playing') {
-        this.gridContainer.removeChild(g);
+        if (g.parent) this.gridContainer.removeChild(g);
         return;
       }
       frame++;
-      g.alpha = frame / 10;
-      if (frame >= 10) {
+      g.alpha = frame / 8;
+      if (frame >= 8) {
         this.gridContainer.removeChild(g);
         return;
       }
@@ -427,12 +539,10 @@ export class Game {
     this.app.ticker.addOnce(animate);
   }
 
-  animateLineClear(rows, cols) {
+  _animateLineClear(rows, cols) {
     const flashCells = [];
     for (const r of rows) {
-      for (let c = 0; c < GRID_SIZE; c++) {
-        flashCells.push({ row: r, col: c });
-      }
+      for (let c = 0; c < GRID_SIZE; c++) flashCells.push({ row: r, col: c });
     }
     for (const c of cols) {
       for (let r = 0; r < GRID_SIZE; r++) {
@@ -460,13 +570,77 @@ export class Game {
       }
       if (frame > 15) {
         for (const g of flashGraphics) {
-          this.gridContainer.removeChild(g);
+          if (g.parent) this.gridContainer.removeChild(g);
         }
         return;
       }
       this.app.ticker.addOnce(animate);
     };
     this.app.ticker.addOnce(animate);
+  }
+
+  _checkLevelUp() {
+    const needed = getScoreForLevel(this.level);
+    while (this.score >= needed && this.level < MAX_LEVEL) {
+      this.level++;
+      this.currentTheme = getTheme(this.level);
+      this._applyTheme();
+      this._updateGridVisual();
+      this._onLevelUp();
+      if (this.score < getScoreForLevel(this.level)) break;
+    }
+    this._updateScore();
+  }
+
+  _onLevelUp() {
+    this.effects.levelUpCelebration();
+
+    const lvlText = new PIXI.Text(`LEVEL ${this.level}!`, {
+      fontFamily: 'Arial, sans-serif', fontSize: 52,
+      fill: this.currentTheme.accent, fontWeight: 'bold',
+      stroke: 0x000000, strokeThickness: 6,
+    });
+    lvlText.anchor.set(0.5);
+    lvlText.x = GAME_WIDTH / 2;
+    lvlText.y = GAME_HEIGHT / 2;
+    lvlText.alpha = 0;
+    this.container.addChild(lvlText);
+
+    const themeName = new PIXI.Text(this.currentTheme.title, {
+      fontFamily: 'Arial, sans-serif', fontSize: 16,
+      fill: this.currentTheme.accent, letterSpacing: 6,
+    });
+    themeName.anchor.set(0.5);
+    themeName.x = GAME_WIDTH / 2;
+    themeName.y = GAME_HEIGHT / 2 + 45;
+    themeName.alpha = 0;
+    this.container.addChild(themeName);
+
+    let frame = 0;
+    const animate = () => {
+      frame++;
+      lvlText.alpha = Math.min(1, frame / 15);
+      lvlText.scale.set(1 + (1 - lvlText.alpha) * 0.4);
+      lvlText.y = GAME_HEIGHT / 2 - (1 - lvlText.alpha) * 20;
+      themeName.alpha = Math.max(0, Math.min(1, (frame - 20) / 15));
+      if (frame > 80) {
+        lvlText.alpha -= 0.03;
+        themeName.alpha -= 0.03;
+        if (lvlText.alpha <= 0) {
+          this.container.removeChild(lvlText);
+          this.container.removeChild(themeName);
+          return;
+        }
+      }
+      this.app.ticker.addOnce(animate);
+    };
+    this.app.ticker.addOnce(animate);
+
+    if (this.level > this.highLevel) {
+      this.highLevel = this.level;
+      localStorage.setItem('blockblast_highlevel', String(this.highLevel));
+      this.highScoreText.text = `Best: ${this.highScore}`;
+    }
   }
 
   _returnPieceToSlot(piece) {
@@ -479,42 +653,25 @@ export class Game {
   }
 
   _updateGridVisual() {
-    const blockTexKeys = [
-      '1-removed-bg.png',
-      '2-removed-bg.png',
-      '3-removed-bg.png',
-      '4-removed-bg.png',
-    ];
-
     for (let r = 0; r < GRID_SIZE; r++) {
       for (let c = 0; c < GRID_SIZE; c++) {
         const g = this.cellGraphics[r][c];
         const val = this.grid.cells[r][c];
         g.clear();
 
+        const x = BOARD_OFFSET_X + c * CELL_SIZE;
+        const y = BOARD_OFFSET_Y + r * CELL_SIZE;
+
         if (val !== null) {
           const color = COLORS.cellOccupied[val % COLORS.cellOccupied.length];
-          const x = BOARD_OFFSET_X + c * CELL_SIZE;
-          const y = BOARD_OFFSET_Y + r * CELL_SIZE;
           g.beginFill(color, 0.9);
           g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
           g.endFill();
-
-          const texKey = blockTexKeys[val % blockTexKeys.length];
-          const tex = this.textures[texKey];
-          if (tex) {
-            g.beginFill(0xffffff, 0.25);
-            g.drawRoundedRect(x + 4, y + 4, CELL_SIZE - 10, (CELL_SIZE - 2) / 3, 3);
-            g.endFill();
-          } else {
-            g.beginFill(0xffffff, 0.1);
-            g.drawRoundedRect(x + 4, y + 4, CELL_SIZE - 10, (CELL_SIZE - 2) / 3, 3);
-            g.endFill();
-          }
+          g.beginFill(0xffffff, 0.12);
+          g.drawRoundedRect(x + 4, y + 4, CELL_SIZE - 10, (CELL_SIZE - 2) / 3, 3);
+          g.endFill();
         } else {
-          const x = BOARD_OFFSET_X + c * CELL_SIZE;
-          const y = BOARD_OFFSET_Y + r * CELL_SIZE;
-          g.lineStyle(1, COLORS.gridLine, 0.4);
+          g.lineStyle(1, COLORS.gridLine, 0.3);
           g.beginFill(COLORS.cellEmpty);
           g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 3);
           g.endFill();
@@ -529,8 +686,7 @@ export class Game {
     const scale = totalPieceWidth > availableWidth ? availableWidth / totalPieceWidth : 1;
 
     for (const piece of this.pieces) {
-      const s = totalPieceWidth > availableWidth ? availableWidth / totalPieceWidth : 1;
-      piece.container.scale.set(s);
+      piece.container.scale.set(scale);
     }
 
     const scaledWidths = this.pieces.map(p => p.visualWidth * scale);
@@ -549,12 +705,13 @@ export class Game {
     this.pieces = [];
     this.piecesContainer.removeChildren();
 
-    const shuffled = [...PIECE_SHAPES].sort(() => Math.random() - 0.5);
+    const shapes = getShapesForLevel(this.level);
+    const shuffled = [...shapes].sort(() => Math.random() - 0.5);
 
     for (let i = 0; i < NUM_PIECES_PER_TURN; i++) {
       const shapeDef = shuffled[i % shuffled.length];
       const colorIndex = Math.floor(Math.random() * COLORS.cellOccupied.length);
-      const piece = new Piece(shapeDef.shape, colorIndex, this.grid, this.textures);
+      const piece = new Piece(shapeDef.shape, colorIndex, this.grid);
       this.pieces.push(piece);
     }
 
@@ -562,9 +719,6 @@ export class Game {
     for (let i = 0; i < this.pieces.length; i++) {
       this.pieces[i].setPosition(positions[i].x, positions[i].y);
       this.piecesContainer.addChild(this.pieces[i].container);
-      if (this.pieces[i].body && this.engine) {
-        Matter.Composite.add(this.engine.world, this.pieces[i].body);
-      }
     }
 
     if (!this.grid.hasAnyValidPlacement(this.pieces)) {
@@ -576,21 +730,21 @@ export class Game {
     this.state = 'playing';
     this.isGameOver = false;
     this.score = 0;
+    this.level = parseInt(localStorage.getItem('blockblast_startlevel') || '1');
+    this.level = Math.min(this.level, MAX_LEVEL);
     this.isDragging = false;
     this.activePieceIndex = -1;
     this.menuContainer.visible = false;
     this.gameOverContainer.visible = false;
+    this.effects.clear();
+
+    this.currentTheme = getTheme(this.level);
+    this._applyTheme();
 
     this.grid.cells = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
     this._updateGridVisual();
     this._updateScore();
 
-    if (this.engine) {
-      const bodies = Matter.Composite.allBodies(this.engine.world);
-      for (const b of bodies) {
-        if (b.pieceRef) Matter.Composite.remove(this.engine.world, b);
-      }
-    }
     this.pieces = [];
     this.piecesContainer.removeChildren();
     this.spawnPieces();
@@ -603,16 +757,30 @@ export class Game {
     if (this.score > this.highScore) {
       this.highScore = this.score;
       localStorage.setItem('blockblast_highscore', String(this.highScore));
-      this.highScoreText.text = `Best: ${this.highScore}`;
+    }
+    if (this.level > this.highLevel) {
+      this.highLevel = this.level;
+      localStorage.setItem('blockblast_highlevel', String(this.highLevel));
     }
 
     this.finalScoreText.text = `Score: ${this.score}`;
+    this.finalLevelText.text = `Reached Level: ${this.level}`;
+    this.bestScoreText.text = `Best: ${this.highScore}`;
     this.gameOverContainer.visible = true;
+
+    this.effects.screenShake(8, 400);
+    this.effects.emitBurst(GAME_WIDTH / 2, GAME_HEIGHT / 2, 0xff4444, 2);
   }
 
   _updateScore() {
     this.scoreText.text = `Score: ${this.score}`;
-    this.scoreText.x = BOARD_OFFSET_X;
+    this.highScoreText.text = `Best: ${this.highScore}  LV.${this.level}`;
+    this.levelText.text = `LV.${this.level}`;
+    this._updateProgressBar();
+  }
+
+  update(delta) {
+    this.effects.update(delta);
   }
 
   restart() {

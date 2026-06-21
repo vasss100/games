@@ -1,5 +1,4 @@
 import * as PIXI from 'pixi.js';
-import Matter from 'matter-js';
 import { Game } from './Game.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 
@@ -14,28 +13,14 @@ const app = new PIXI.Application({
 
 document.body.appendChild(app.view);
 
-const engine = Matter.Engine.create({ gravity: { x: 0, y: 0 } });
-const mouseConstraint = Matter.MouseConstraint.create(engine, {
-  constraint: { stiffness: 0.2, render: { visible: false } },
-});
-
 let game;
 
-app.ticker.add(() => {
+app.ticker.add((delta) => {
   if (!game) return;
-  Matter.Engine.update(engine, 1000 / 60);
-
-  const bodies = Matter.Composite.allBodies(engine.world);
-  for (const body of bodies) {
-    if (body.label === 'piece' && body.pieceRef && !body.pieceRef.dragging) {
-      const piece = body.pieceRef;
-      piece.container.x = body.position.x - piece.visualWidth / 2;
-      piece.container.y = body.position.y - piece.visualHeight / 2;
-    }
-  }
+  game.update(delta);
 });
 
-game = new Game(app, engine, mouseConstraint);
+game = new Game(app, null);
 
 window.addEventListener('resize', () => {
   const scaleX = window.innerWidth / GAME_WIDTH;
