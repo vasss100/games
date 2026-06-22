@@ -27,6 +27,7 @@ export class Game {
     this.isGameOver = false;
     this.currentTheme = getTheme(1);
     this._comboAnimating = false;
+    this._boardTextureLoaded = false;
 
     this.container = new PIXI.Container();
     app.stage.addChild(this.container);
@@ -35,6 +36,7 @@ export class Game {
     this._createBackground();
     this._createGridUI();
     this._createUI();
+    this._loadBoardTexture();
     this._homePage = new HomePage(app, this.container, {
       onPlay: () => this.startGame(),
       onSettings: () => console.log('Settings'),
@@ -56,12 +58,31 @@ export class Game {
     this.container.addChild(this.boardDecor);
   }
 
+  _loadBoardTexture() {
+    PIXI.Assets.add('board_bg', '/assets/board_bg.png');
+    PIXI.Assets.load('board_bg').then((tex) => {
+      this._boardTexture = tex;
+      this._boardTextureLoaded = true;
+      if (this.boardSprite) {
+        this.boardSprite.texture = tex;
+      }
+    }).catch(() => {});
+  }
+
   _createGridUI() {
     this.gridContainer = new PIXI.Container();
     this.container.addChild(this.gridContainer);
 
     this.boardBg = new PIXI.Graphics();
     this.gridContainer.addChild(this.boardBg);
+
+    this.boardSprite = new PIXI.Sprite(PIXI.Texture.WHITE);
+    this.boardSprite.x = BOARD_OFFSET_X - 4;
+    this.boardSprite.y = BOARD_OFFSET_Y - 4;
+    this.boardSprite.width = GRID_SIZE * CELL_SIZE + 8;
+    this.boardSprite.height = GRID_SIZE * CELL_SIZE + 8;
+    this.boardSprite.tint = 0xffffff;
+    this.gridContainer.addChild(this.boardSprite);
 
     this.cellGraphics = [];
     for (let r = 0; r < GRID_SIZE; r++) {
