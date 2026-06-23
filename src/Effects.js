@@ -42,6 +42,28 @@ export class Effects {
     }
   }
 
+  emitSquareParticles(x, y, color, count = 6, speed = 3, size = 3, life = 25) {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 1.0;
+      const spd = speed * (0.5 + Math.random() * 0.8);
+      const g = new PIXI.Graphics();
+      const s = size * (0.6 + Math.random() * 0.8);
+      g.beginFill(color, 1);
+      g.drawRect(-s / 2, -s / 2, s, s);
+      g.endFill();
+      g.x = x;
+      g.y = y;
+      this.container.addChild(g);
+      this.particles.push({
+        graphic: g,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        life: life * (0.5 + Math.random() * 0.5),
+        maxLife: life,
+      });
+    }
+  }
+
   emitBurst(x, y, color, rings = 2) {
     for (let r = 0; r < rings; r++) {
       const id = setTimeout(() => {

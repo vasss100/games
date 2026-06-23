@@ -155,37 +155,37 @@ export class HomePage {
 
   _buildCenterIcons() {
     const iconY = GAME_HEIGHT * 0.46;
+    const iconSize = 40;
 
-    try {
-      const speaker = PIXI.Sprite.from(UI_ASSETS.speaker);
-      speaker.anchor.set(0.5);
-      speaker.width = 40;
-      speaker.height = 40;
-      speaker.x = GAME_WIDTH / 2 - 30;
-      speaker.y = iconY;
-      speaker.eventMode = 'static';
-      speaker.cursor = 'pointer';
-      speaker.on('pointerdown', () => {
-        this._soundOn = !this._soundOn;
-        speaker.alpha = this._soundOn ? 1 : 0.4;
-      });
-      this.container.addChild(speaker);
-    } catch {}
+    const addIcon = (assetKey, xPos, onClick) => {
+      const bg = new PIXI.Graphics();
+      bg.beginFill(0x000000, 0.25);
+      bg.drawCircle(0, 0, 24);
+      bg.endFill();
+      bg.x = xPos;
+      bg.y = iconY;
+      this.container.addChild(bg);
 
-    try {
-      const settings = PIXI.Sprite.from(UI_ASSETS.settings);
-      settings.anchor.set(0.5);
-      settings.width = 40;
-      settings.height = 40;
-      settings.x = GAME_WIDTH / 2 + 30;
-      settings.y = iconY;
-      settings.eventMode = 'static';
-      settings.cursor = 'pointer';
-      settings.on('pointerdown', () => {
-        this._showSettings();
-      });
-      this.container.addChild(settings);
-    } catch {}
+      try {
+        const sprite = PIXI.Sprite.from(assetKey);
+        sprite.anchor.set(0.5);
+        const sz = Math.max(sprite.texture.orig.width, sprite.texture.orig.height);
+        sprite.scale.set(iconSize / sz);
+        sprite.x = xPos;
+        sprite.y = iconY;
+        sprite.eventMode = 'static';
+        sprite.cursor = 'pointer';
+        sprite.on('pointerdown', onClick);
+        this.container.addChild(sprite);
+      } catch {}
+    };
+
+    addIcon(UI_ASSETS.speaker, GAME_WIDTH / 2 - 30, () => {
+      this._soundOn = !this._soundOn;
+    });
+    addIcon(UI_ASSETS.settings, GAME_WIDTH / 2 + 30, () => {
+      this._showSettings();
+    });
   }
 
   _buildPlayButton() {
@@ -196,7 +196,7 @@ export class HomePage {
       playSprite.anchor.set(0.5);
       playSprite.scale.set(baseScale);
       playSprite.x = GAME_WIDTH / 2;
-      playSprite.y = GAME_HEIGHT * 0.70 + (playSprite.height * baseScale) / 2;
+      playSprite.y = GAME_HEIGHT * 0.72;
       playSprite.eventMode = 'static';
       playSprite.cursor = 'pointer';
       playSprite.on('pointerdown', () => {
@@ -224,7 +224,7 @@ export class HomePage {
       btn.drawRoundedRect(8, 5, btnW - 16, 18, 10);
       btn.endFill();
       btn.x = (GAME_WIDTH - btnW) / 2;
-      btn.y = GAME_HEIGHT * 0.70;
+      btn.y = GAME_HEIGHT * 0.72 - 30;
       btn.eventMode = 'static';
       btn.cursor = 'pointer';
       btn.on('pointerdown', () => {
@@ -239,7 +239,7 @@ export class HomePage {
       });
       playTxt.anchor.set(0.5);
       playTxt.x = (GAME_WIDTH - btnW) / 2 + btnW / 2;
-      playTxt.y = GAME_HEIGHT * 0.70 + 30;
+      playTxt.y = GAME_HEIGHT * 0.72;
       this.container.addChild(playTxt);
     }
   }
@@ -283,53 +283,36 @@ export class HomePage {
 
     const iconY = popY + 95;
 
-    try {
-      const speakerSprite = PIXI.Sprite.from(UI_ASSETS.speaker);
-      speakerSprite.anchor.set(0.5);
-      speakerSprite.width = 44;
-      speakerSprite.height = 44;
-      speakerSprite.x = popX + popW / 2 - 50;
-      speakerSprite.y = iconY;
-      speakerSprite.eventMode = 'static';
-      speakerSprite.cursor = 'pointer';
-      speakerSprite.on('pointerdown', () => {
-        this._soundOn = !this._soundOn;
-        speakerSprite.alpha = this._soundOn ? 1 : 0.35;
-      });
-      this._settingsContainer.addChild(speakerSprite);
+    const addPopupIcon = (assetKey, xPos, label, getOn, setOn) => {
+      try {
+        const sprite = PIXI.Sprite.from(assetKey);
+        sprite.anchor.set(0.5);
+        const sz = Math.max(sprite.texture.orig.width, sprite.texture.orig.height);
+        sprite.scale.set(44 / sz);
+        sprite.x = xPos;
+        sprite.y = iconY;
+        sprite.eventMode = 'static';
+        sprite.cursor = 'pointer';
+        sprite.on('pointerdown', () => {
+          setOn(!getOn());
+          sprite.alpha = getOn() ? 1 : 0.35;
+        });
+        this._settingsContainer.addChild(sprite);
+      } catch {}
 
-      const sLabel = new PIXI.Text('Sound', {
+      const lbl = new PIXI.Text(label, {
         fontFamily: FONT, fontSize: 11, fill: 0xAAAAAA,
       });
-      sLabel.anchor.set(0.5);
-      sLabel.x = speakerSprite.x;
-      sLabel.y = iconY + 30;
-      this._settingsContainer.addChild(sLabel);
-    } catch {}
+      lbl.anchor.set(0.5);
+      lbl.x = xPos;
+      lbl.y = iconY + 30;
+      this._settingsContainer.addChild(lbl);
+    };
 
-    try {
-      const musicSprite = PIXI.Sprite.from(UI_ASSETS.music);
-      musicSprite.anchor.set(0.5);
-      musicSprite.width = 44;
-      musicSprite.height = 44;
-      musicSprite.x = popX + popW / 2 + 50;
-      musicSprite.y = iconY;
-      musicSprite.eventMode = 'static';
-      musicSprite.cursor = 'pointer';
-      musicSprite.on('pointerdown', () => {
-        this._musicOn = !this._musicOn;
-        musicSprite.alpha = this._musicOn ? 1 : 0.35;
-      });
-      this._settingsContainer.addChild(musicSprite);
-
-      const mLabel = new PIXI.Text('Music', {
-        fontFamily: FONT, fontSize: 11, fill: 0xAAAAAA,
-      });
-      mLabel.anchor.set(0.5);
-      mLabel.x = musicSprite.x;
-      mLabel.y = iconY + 30;
-      this._settingsContainer.addChild(mLabel);
-    } catch {}
+    addPopupIcon(UI_ASSETS.speaker, popX + popW / 2 - 50, 'Sound',
+      () => this._soundOn, (v) => { this._soundOn = v; });
+    addPopupIcon(UI_ASSETS.music, popX + popW / 2 + 50, 'Music',
+      () => this._musicOn, (v) => { this._musicOn = v; });
 
     try {
       const closeBtn = PIXI.Sprite.from(UI_ASSETS.close);
