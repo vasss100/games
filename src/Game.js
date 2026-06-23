@@ -25,6 +25,7 @@ export class Game {
     this.isGameOver = false;
     this.currentTheme = getTheme(1);
     this._comboAnimating = false;
+    this._levelPendingSpawn = false;
 
     this.container = new PIXI.Container();
     app.stage.addChild(this.container);
@@ -37,15 +38,13 @@ export class Game {
     this.effects = new Effects(this.container);
     this._createBackground();
     this._createUI();
+    this._createGameOver();
+    this._createLevelCompletePopup();
     this._homePage = new HomePage(app, this.container, {
       onPlay: () => this.startGame(),
       onSettings: () => console.log('Settings'),
-      onDaily: () => console.log('Daily Challenge'),
-      onAdventure: () => console.log('Adventure'),
-      onTab: (label) => console.log(`Tab: ${label}`),
     });
     this._homePage.updateHighScore(this.highScore);
-    this._createGameOver();
     this._setupInteraction();
     this._applyTheme();
   }
@@ -56,22 +55,43 @@ export class Game {
   }
 
   _createUI() {
+    try {
+      this.backBtn = PIXI.Sprite.from(UI_ASSETS.back);
+      this.backBtn.width = 34;
+      this.backBtn.height = 34;
+      this.backBtn.x = 12;
+      this.backBtn.y = 10;
+      this.backBtn.eventMode = 'static';
+      this.backBtn.cursor = 'pointer';
+      this.backBtn.on('pointerdown', () => this._goToMenu());
+      this.container.addChild(this.backBtn);
+    } catch {
+      const fb = new PIXI.Graphics();
+      fb.beginFill(0x34C759);
+      fb.drawRoundedRect(10, 8, 40, 40, 20);
+      fb.endFill();
+      fb.eventMode = 'static';
+      fb.cursor = 'pointer';
+      fb.on('pointerdown', () => this._goToMenu());
+      this.container.addChild(fb);
+    }
+
     this.scoreText = new PIXI.Text('Score: 0', {
-      fontFamily: 'Arial, sans-serif', fontSize: 20,
+      fontFamily: 'Arial, sans-serif', fontSize: 18,
       fill: COLORS.uiText, fontWeight: 'bold',
       stroke: 0x000000, strokeThickness: 2,
     });
-    this.scoreText.x = 16;
+    this.scoreText.x = 56;
     this.scoreText.y = 12;
     this.container.addChild(this.scoreText);
 
     this.highScoreText = new PIXI.Text(`Best: ${this.highScore}`, {
-      fontFamily: 'Arial, sans-serif', fontSize: 14,
+      fontFamily: 'Arial, sans-serif', fontSize: 12,
       fill: COLORS.uiText,
     });
     this.highScoreText.alpha = 0.6;
-    this.highScoreText.x = 16;
-    this.highScoreText.y = 36;
+    this.highScoreText.x = 56;
+    this.highScoreText.y = 34;
     this.container.addChild(this.highScoreText);
 
     this.levelText = new PIXI.Text('LV.1', {
@@ -107,35 +127,14 @@ export class Game {
       fontFamily: 'Arial, sans-serif', fontSize: 26,
       fill: COLORS.uiAccent,
     });
-    this.restartBtn.x = GAME_WIDTH - 34;
-    this.restartBtn.y = 10;
+    this.restartBtn.x = GAME_WIDTH - 36;
+    this.restartBtn.y = 8;
     this.restartBtn.eventMode = 'static';
     this.restartBtn.cursor = 'pointer';
     this.restartBtn.on('pointerdown', () => {
       if (this.state === 'playing' && !this.isGameOver) this.startGame();
     });
     this.container.addChild(this.restartBtn);
-
-    try {
-      this.backBtn = PIXI.Sprite.from(UI_ASSETS.back);
-      this.backBtn.width = 36;
-      this.backBtn.height = 36;
-      this.backBtn.x = GAME_WIDTH - 38;
-      this.backBtn.y = GAME_HEIGHT - 48;
-      this.backBtn.eventMode = 'static';
-      this.backBtn.cursor = 'pointer';
-      this.backBtn.on('pointerdown', () => this._goToMenu());
-      this.container.addChild(this.backBtn);
-    } catch {
-      const fb = new PIXI.Graphics();
-      fb.beginFill(0x34C759);
-      fb.drawRoundedRect(GAME_WIDTH - 56, GAME_HEIGHT - 56, 44, 44, 22);
-      fb.endFill();
-      fb.eventMode = 'static';
-      fb.cursor = 'pointer';
-      fb.on('pointerdown', () => this._goToMenu());
-      this.container.addChild(fb);
-    }
 
     this.comboText = new PIXI.Text('', {
       fontFamily: 'Arial, sans-serif', fontSize: 36,
@@ -158,6 +157,7 @@ export class Game {
     overlay.beginFill(0x000000, 0.75);
     overlay.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     overlay.endFill();
+    overlay.eventMode = 'static';
     this.gameOverContainer.addChild(overlay);
 
     try {
@@ -238,8 +238,95 @@ export class Game {
     retryBtn.addChild(retryText);
 
     retryBtn.on('pointerdown', () => this.startGame());
-    retryBtn.on('pointerover', () => { retryBtn.tint = 0xcccccc; });
-    retryBtn.on('pointerout', () => { retryBtn.tint = 0xffffff; });
+    retryBtn.on('pointerover', () => { retryBtn.alpha = 0.85; });
+    retryBtn.on('pointerout', () => { retryBtn.alpha = 1; });
+  }
+
+  _createLevelCompletePopup() {
+    this._levelCompleteContainer = new PIXI.Container();
+    this._levelCompleteContainer.visible = false;
+    this.container.addChild(this._levelCompleteContainer);
+
+    const overlay = new PIXI.Graphics();
+    overlay.beginFill(0x000000, 0.75);
+    overlay.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    overlay.endFill();
+    overlay.eventMode = 'static';
+    this._levelCompleteContainer.addChild(overlay);
+
+    try {
+      const banner = PIXI.Sprite.from(UI_ASSETS.congratsBanner);
+      const bannerW = Math.min(320, GAME_WIDTH - 40);
+      const s = bannerW / banner.width;
+      banner.width = bannerW;
+      banner.height = banner.height * s;
+      banner.anchor.set(0.5);
+      banner.x = GAME_WIDTH / 2;
+      banner.y = GAME_HEIGHT * 0.28;
+      this._levelCompleteContainer.addChild(banner);
+    } catch {}
+
+    const lvlText = new PIXI.Text(`LEVEL ${this.level} COMPLETE!`, {
+      fontFamily: 'Arial, sans-serif', fontSize: 30,
+      fill: 0xFFD54F, fontWeight: 'bold',
+      stroke: 0x000000, strokeThickness: 4,
+    });
+    lvlText.anchor.set(0.5);
+    lvlText.x = GAME_WIDTH / 2;
+    lvlText.y = GAME_HEIGHT * 0.42;
+    this._levelCompleteContainer.addChild(lvlText);
+
+    try {
+      const exitSprite = PIXI.Sprite.from(UI_ASSETS.exit);
+      const exitW = 180;
+      const exitS = exitW / exitSprite.width;
+      exitSprite.width = exitW;
+      exitSprite.height = exitSprite.height * exitS;
+      exitSprite.anchor.set(0.5);
+      exitSprite.x = GAME_WIDTH / 2;
+      exitSprite.y = GAME_HEIGHT * 0.56;
+      exitSprite.eventMode = 'static';
+      exitSprite.cursor = 'pointer';
+      exitSprite.on('pointerdown', () => {
+        this._hideLevelComplete();
+        this._goToMenu();
+      });
+      this._levelCompleteContainer.addChild(exitSprite);
+
+      const exitTxt = new PIXI.Text('EXIT', {
+        fontFamily: 'Arial, sans-serif', fontSize: 20,
+        fill: 0xFFFFFF, fontWeight: 'bold',
+      });
+      exitTxt.anchor.set(0.5);
+      exitTxt.x = GAME_WIDTH / 2;
+      exitTxt.y = GAME_HEIGHT * 0.56;
+      this._levelCompleteContainer.addChild(exitTxt);
+    } catch {}
+
+    try {
+      const closeSprite = PIXI.Sprite.from(UI_ASSETS.close);
+      closeSprite.width = 40;
+      closeSprite.height = 40;
+      closeSprite.x = GAME_WIDTH / 2 + 130;
+      closeSprite.y = GAME_HEIGHT * 0.30;
+      closeSprite.eventMode = 'static';
+      closeSprite.cursor = 'pointer';
+      closeSprite.on('pointerdown', () => {
+        this._hideLevelComplete();
+        this.spawnPieces();
+      });
+      this._levelCompleteContainer.addChild(closeSprite);
+    } catch {}
+  }
+
+  _showLevelComplete() {
+    this._levelPendingSpawn = true;
+    this._levelCompleteContainer.visible = true;
+  }
+
+  _hideLevelComplete() {
+    this._levelPendingSpawn = false;
+    this._levelCompleteContainer.visible = false;
   }
 
   _setupInteraction() {
@@ -249,6 +336,49 @@ export class Game {
     this.container.on('pointermove', (e) => this._onPointerMove(e));
     this.container.on('pointerup', (e) => this._onPointerUp(e));
     this.container.on('pointerupoutside', (e) => this._onPointerUp(e));
+  }
+
+  _fadeOut(container, duration, onComplete) {
+    if (!container || container.alpha === 0) {
+      if (onComplete) onComplete();
+      return;
+    }
+    const startAlpha = container.alpha;
+    let elapsed = 0;
+    const tick = () => {
+      elapsed++;
+      const t = Math.min(1, elapsed / duration);
+      container.alpha = startAlpha * (1 - t);
+      if (t >= 1) {
+        container.alpha = 0;
+        if (onComplete) onComplete();
+        return;
+      }
+      this.app.ticker.addOnce(tick);
+    };
+    this.app.ticker.addOnce(tick);
+  }
+
+  _fadeIn(container, duration, onComplete) {
+    if (!container) {
+      if (onComplete) onComplete();
+      return;
+    }
+    container.visible = true;
+    container.alpha = 0;
+    let elapsed = 0;
+    const tick = () => {
+      elapsed++;
+      const t = Math.min(1, elapsed / duration);
+      container.alpha = t;
+      if (t >= 1) {
+        container.alpha = 1;
+        if (onComplete) onComplete();
+        return;
+      }
+      this.app.ticker.addOnce(tick);
+    };
+    this.app.ticker.addOnce(tick);
   }
 
   _applyTheme() {
@@ -286,15 +416,24 @@ export class Game {
     this.state = 'menu';
     this.isGameOver = false;
     this.isDragging = false;
+    this._levelPendingSpawn = false;
     this.activePieceIndex = -1;
     this.gameOverContainer.visible = false;
-    this._homePage.show();
+    this._levelCompleteContainer.visible = false;
+
+    this.pieces = [];
+    this.piecesContainer.removeChildren();
+
+    this._fadeIn(this._homePage.container, 20, () => {
+      this._homePage.visible = true;
+    });
     this._homePage.updateHighScore(this.highScore);
+    this._homePage.setLevel(this.level);
   }
 
   _onPointerDown(e) {
     if (this.state !== 'playing' || this.isGameOver) return;
-    if (this.isDragging) return;
+    if (this.isDragging || this._levelPendingSpawn) return;
 
     const pos = e.global;
     for (let i = this.pieces.length - 1; i >= 0; i--) {
@@ -401,8 +540,10 @@ export class Game {
 
       const placedCount = this.pieces.filter(p => p.placed).length;
       if (placedCount === this.pieces.length) {
-        this._checkLevelUp();
-        this.spawnPieces();
+        const leveledUp = this._checkLevelUp();
+        if (!leveledUp) {
+          this.spawnPieces();
+        }
       } else {
         const unplaced = this.pieces.filter(p => !p.placed);
         if (unplaced.length > 0 && !this.grid.hasAnyValidPlacement(unplaced)) {
@@ -509,16 +650,21 @@ export class Game {
   }
 
   _checkLevelUp() {
+    let leveledUp = false;
     const needed = getScoreForLevel(this.level);
     while (this.score >= needed && this.level < MAX_LEVEL) {
       this.level++;
       this.currentTheme = getTheme(this.level);
       this._applyTheme();
       this.grid.updateCells();
-      this._onLevelUp();
+      leveledUp = true;
       if (this.score < getScoreForLevel(this.level)) break;
     }
+    if (leveledUp) {
+      this._onLevelUp();
+    }
     this._updateScore();
+    return leveledUp;
   }
 
   _onLevelUp() {
@@ -564,6 +710,8 @@ export class Game {
       this.app.ticker.addOnce(animate);
     };
     this.app.ticker.addOnce(animate);
+
+    this._showLevelComplete();
 
     if (this.level > this.highLevel) {
       this.highLevel = this.level;
@@ -636,10 +784,18 @@ export class Game {
     if (isNaN(this.level) || this.level < 1) this.level = 1;
     this.level = Math.min(this.level, MAX_LEVEL);
     this.isDragging = false;
+    this._levelPendingSpawn = false;
     this.activePieceIndex = -1;
-    this._homePage.hide();
     this.gameOverContainer.visible = false;
+    this._levelCompleteContainer.visible = false;
     this.effects.clear();
+
+    if (this._homePage.visible) {
+      this._fadeOut(this._homePage.container, 20, () => {
+        this._homePage.container.visible = false;
+        this._homePage.visible = false;
+      });
+    }
 
     this.currentTheme = getTheme(this.level);
     this._applyTheme();
