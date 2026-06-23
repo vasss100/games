@@ -5,9 +5,9 @@ import { Effects } from './Effects.js';
 import { HomePage } from './HomePage.js';
 import {
   GRID_SIZE, CELL_SIZE,
-  PIECE_AREA_Y, COLORS, GAME_WIDTH, GAME_HEIGHT,
+  COLORS, GAME_WIDTH, GAME_HEIGHT,
   getShapesForLevel, NUM_PIECES_PER_TURN, MAX_LEVEL,
-  getTheme, getScoreForLevel,
+  getTheme, getScoreForLevel, NUM_GAME_BLOCKS, UI_ASSETS,
 } from './constants.js';
 
 export class Game {
@@ -116,6 +116,27 @@ export class Game {
     });
     this.container.addChild(this.restartBtn);
 
+    try {
+      this.backBtn = PIXI.Sprite.from(UI_ASSETS.back);
+      this.backBtn.width = 36;
+      this.backBtn.height = 36;
+      this.backBtn.x = GAME_WIDTH - 38;
+      this.backBtn.y = GAME_HEIGHT - 48;
+      this.backBtn.eventMode = 'static';
+      this.backBtn.cursor = 'pointer';
+      this.backBtn.on('pointerdown', () => this._goToMenu());
+      this.container.addChild(this.backBtn);
+    } catch {
+      const fb = new PIXI.Graphics();
+      fb.beginFill(0x34C759);
+      fb.drawRoundedRect(GAME_WIDTH - 56, GAME_HEIGHT - 56, 44, 44, 22);
+      fb.endFill();
+      fb.eventMode = 'static';
+      fb.cursor = 'pointer';
+      fb.on('pointerdown', () => this._goToMenu());
+      this.container.addChild(fb);
+    }
+
     this.comboText = new PIXI.Text('', {
       fontFamily: 'Arial, sans-serif', fontSize: 36,
       fill: 0xFFD54F, fontWeight: 'bold',
@@ -138,6 +159,27 @@ export class Game {
     overlay.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     overlay.endFill();
     this.gameOverContainer.addChild(overlay);
+
+    try {
+      this.closeBtn = PIXI.Sprite.from(UI_ASSETS.close);
+      this.closeBtn.width = 40;
+      this.closeBtn.height = 40;
+      this.closeBtn.x = GAME_WIDTH / 2 + 120;
+      this.closeBtn.y = GAME_HEIGHT / 2 - 145;
+      this.closeBtn.eventMode = 'static';
+      this.closeBtn.cursor = 'pointer';
+      this.closeBtn.on('pointerdown', () => this._goToMenu());
+      this.gameOverContainer.addChild(this.closeBtn);
+    } catch {
+      const fb = new PIXI.Graphics();
+      fb.beginFill(0xff4444);
+      fb.drawRoundedRect(GAME_WIDTH / 2 + 100, GAME_HEIGHT / 2 - 165, 40, 40, 20);
+      fb.endFill();
+      fb.eventMode = 'static';
+      fb.cursor = 'pointer';
+      fb.on('pointerdown', () => this._goToMenu());
+      this.gameOverContainer.addChild(fb);
+    }
 
     const goTitle = new PIXI.Text('GAME OVER', {
       fontFamily: 'Arial, sans-serif', fontSize: 42,
@@ -238,6 +280,16 @@ export class Game {
     this.progressBar.endFill();
     const remaining = Math.max(0, needed - this.score);
     this.progressText.text = `${remaining}`;
+  }
+
+  _goToMenu() {
+    this.state = 'menu';
+    this.isGameOver = false;
+    this.isDragging = false;
+    this.activePieceIndex = -1;
+    this.gameOverContainer.visible = false;
+    this._homePage.show();
+    this._homePage.updateHighScore(this.highScore);
   }
 
   _onPointerDown(e) {
@@ -560,7 +612,7 @@ export class Game {
 
     for (let i = 0; i < NUM_PIECES_PER_TURN; i++) {
       const shapeDef = shuffled[i % shuffled.length];
-      const colorIndex = Math.floor(Math.random() * 17);
+      const colorIndex = Math.floor(Math.random() * NUM_GAME_BLOCKS);
       const piece = new Piece(shapeDef.shape, colorIndex, this.grid);
       this.pieces.push(piece);
     }

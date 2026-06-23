@@ -29,11 +29,31 @@ export const NUM_PIECES_PER_TURN = 3;
 
 export const ATLAS_PATH = './assets/game_master_sheet.json';
 
-export const TOTAL_ASSET_FRAMES = 17;
-export const ASSET_NAMES = Array.from({ length: TOTAL_ASSET_FRAMES }, (_, i) => `asset_${i + 1}`);
+export const GAME_BLOCK_ASSETS = [
+  'asset_4',  // Blue Square Block
+  'asset_7',  // Green Square Block
+  'asset_9',  // Red Square Block
+  'asset_14', // Dark Blue Square Block
+  'asset_15', // Brown Square Block
+  'asset_16', // Yellow Square Block
+];
+export const NUM_GAME_BLOCKS = GAME_BLOCK_ASSETS.length;
 
-export function getAssetName(index) {
-  return ASSET_NAMES[index % TOTAL_ASSET_FRAMES];
+export const UI_ASSETS = {
+  speaker: 'asset_1',
+  levelSelect: 'asset_2',
+  congratsBanner: 'asset_3',
+  coin: 'asset_5',
+  back: 'asset_6',
+  exit: 'asset_10',
+  close: 'asset_11',
+  settings: 'asset_12',
+  trophy: 'asset_13',
+  play: 'asset_17',
+};
+
+export function getGameBlockAsset(index) {
+  return GAME_BLOCK_ASSETS[index % NUM_GAME_BLOCKS];
 }
 
 const THEMES = [

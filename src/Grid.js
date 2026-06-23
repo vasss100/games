@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { GRID_SIZE, CELL_SIZE, COLORS } from './constants.js';
+import { GRID_SIZE, CELL_SIZE, COLORS, getGameBlockAsset } from './constants.js';
 
 export class Grid {
   constructor(app, parentContainer) {
@@ -122,7 +122,8 @@ export class Grid {
         const y = r * CELL_SIZE;
 
         if (val !== null) {
-          const sprite = PIXI.Sprite.from(`asset_${(val % 17) + 1}`);
+          const spriteName = getGameBlockAsset(val);
+          const sprite = PIXI.Sprite.from(spriteName);
           sprite.width = CELL_SIZE - 4;
           sprite.height = CELL_SIZE - 4;
           sprite.x = x + 2;

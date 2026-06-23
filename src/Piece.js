@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { CELL_SIZE } from './constants.js';
+import { CELL_SIZE, getGameBlockAsset } from './constants.js';
 
 export class Piece {
   constructor(shapeMatrix, colorIndex, grid) {
@@ -22,7 +22,7 @@ export class Piece {
   }
 
   _createGraphics() {
-    const spriteName = `asset_${(this.colorIndex % 17) + 1}`;
+    const spriteName = getGameBlockAsset(this.colorIndex);
 
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {

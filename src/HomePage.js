@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
+import { GAME_WIDTH, GAME_HEIGHT, UI_ASSETS } from './constants.js';
 
 const FONT = 'Outfit, Arial, sans-serif';
 
@@ -12,6 +12,7 @@ export class HomePage {
     this.callbacks = callbacks;
     this.visible = true;
     this._logoTime = 0;
+    this._soundOn = true;
 
     this._loaded = false;
 
@@ -68,16 +69,25 @@ export class HomePage {
     header.y = 8;
     this.container.addChild(header);
 
-    const coin = new PIXI.Graphics();
-    coin.beginFill(0xFFD700);
-    coin.drawCircle(0, 0, 12);
-    coin.endFill();
-    coin.beginFill(0xFFA500, 0.4);
-    coin.drawCircle(0, 0, 6);
-    coin.endFill();
-    coin.x = 22 + 12;
-    coin.y = 18 + 12;
-    this.container.addChild(coin);
+    try {
+      const coin = PIXI.Sprite.from(UI_ASSETS.coin);
+      coin.width = 24;
+      coin.height = 24;
+      coin.x = 16;
+      coin.y = 22;
+      this.container.addChild(coin);
+    } catch {
+      const coin = new PIXI.Graphics();
+      coin.beginFill(0xFFD700);
+      coin.drawCircle(0, 0, 12);
+      coin.endFill();
+      coin.beginFill(0xFFA500, 0.4);
+      coin.drawCircle(0, 0, 6);
+      coin.endFill();
+      coin.x = 28;
+      coin.y = 34;
+      this.container.addChild(coin);
+    }
 
     this._coinText = new PIXI.Text('1250', {
       fontFamily: FONT, fontSize: 15, fill: 0xFFFFFF, fontWeight: 'bold',
@@ -86,39 +96,57 @@ export class HomePage {
     this._coinText.y = 22;
     this.container.addChild(this._coinText);
 
-    const diamond = new PIXI.Graphics();
-    diamond.beginFill(0x00BFFF);
-    diamond.moveTo(0, -9);
-    diamond.lineTo(9, 0);
-    diamond.lineTo(0, 9);
-    diamond.lineTo(-9, 0);
-    diamond.closePath();
-    diamond.endFill();
-    diamond.x = 110 + 12;
-    diamond.y = 21 + 12;
-    this.container.addChild(diamond);
+    try {
+      const speaker = PIXI.Sprite.from(UI_ASSETS.speaker);
+      speaker.width = 24;
+      speaker.height = 24;
+      speaker.x = 110;
+      speaker.y = 22;
+      speaker.eventMode = 'static';
+      speaker.cursor = 'pointer';
+      speaker.on('pointerdown', () => {
+        this._soundOn = !this._soundOn;
+        speaker.alpha = this._soundOn ? 1 : 0.4;
+      });
+      this.container.addChild(speaker);
+    } catch {
+      const fb = new PIXI.Graphics();
+      fb.beginFill(0xFFFFFF, 0.15);
+      fb.drawCircle(0, 0, 10);
+      fb.endFill();
+      fb.x = 122;
+      fb.y = 34;
+      this.container.addChild(fb);
+    }
 
-    this._diamondText = new PIXI.Text('85', {
-      fontFamily: FONT, fontSize: 15, fill: 0xFFFFFF, fontWeight: 'bold',
-    });
-    this._diamondText.x = 130;
-    this._diamondText.y = 22;
-    this.container.addChild(this._diamondText);
-
-    const gear = new PIXI.Graphics();
-    gear.lineStyle(2, 0x555555);
-    gear.drawCircle(0, 0, 8);
-    gear.beginFill(0xFFFFFF, 0.15);
-    gear.drawCircle(0, 0, 6);
-    gear.endFill();
-    gear.x = GAME_WIDTH - 42 + 8;
-    gear.y = 20 + 8;
-    gear.eventMode = 'static';
-    gear.cursor = 'pointer';
-    gear.on('pointerdown', () => {
-      if (this.callbacks.onSettings) this.callbacks.onSettings();
-    });
-    this.container.addChild(gear);
+    try {
+      const settings = PIXI.Sprite.from(UI_ASSETS.settings);
+      settings.width = 24;
+      settings.height = 24;
+      settings.x = GAME_WIDTH - 48;
+      settings.y = 22;
+      settings.eventMode = 'static';
+      settings.cursor = 'pointer';
+      settings.on('pointerdown', () => {
+        if (this.callbacks.onSettings) this.callbacks.onSettings();
+      });
+      this.container.addChild(settings);
+    } catch {
+      const gear = new PIXI.Graphics();
+      gear.lineStyle(2, 0x555555);
+      gear.drawCircle(0, 0, 8);
+      gear.beginFill(0xFFFFFF, 0.15);
+      gear.drawCircle(0, 0, 6);
+      gear.endFill();
+      gear.x = GAME_WIDTH - 36;
+      gear.y = 34;
+      gear.eventMode = 'static';
+      gear.cursor = 'pointer';
+      gear.on('pointerdown', () => {
+        if (this.callbacks.onSettings) this.callbacks.onSettings();
+      });
+      this.container.addChild(gear);
+    }
   }
 
   _buildLogo() {
@@ -163,13 +191,22 @@ export class HomePage {
     panel.y = 185;
     this.container.addChild(panel);
 
-    const crown = new PIXI.Text('👑', {
-      fontFamily: 'Arial, sans-serif', fontSize: 16,
-    });
-    crown.anchor.set(0.5);
-    crown.x = GAME_WIDTH / 2 - 70;
-    crown.y = 203;
-    this.container.addChild(crown);
+    try {
+      const trophy = PIXI.Sprite.from(UI_ASSETS.trophy);
+      trophy.width = 28;
+      trophy.height = 28;
+      trophy.x = GAME_WIDTH / 2 - 80;
+      trophy.y = 196;
+      this.container.addChild(trophy);
+    } catch {
+      const crown = new PIXI.Text('👑', {
+        fontFamily: 'Arial, sans-serif', fontSize: 16,
+      });
+      crown.anchor.set(0.5);
+      crown.x = GAME_WIDTH / 2 - 70;
+      crown.y = 203;
+      this.container.addChild(crown);
+    }
 
     const hsLbl = new PIXI.Text('BEST SCORE', {
       fontFamily: FONT, fontSize: 10, fill: 0x888888,
@@ -189,42 +226,65 @@ export class HomePage {
   }
 
   _buildPlayButton() {
-    const shadow = new PIXI.Graphics();
-    shadow.beginFill(0xC32700, 0.4);
-    shadow.drawRoundedRect(0, 0, 300, 64, 28);
-    shadow.endFill();
-    shadow.x = GAME_WIDTH / 2 - 150;
-    shadow.y = 272;
-    this.container.addChild(shadow);
+    try {
+      const playSprite = PIXI.Sprite.from(UI_ASSETS.play);
+      const scale = Math.min(300 / playSprite.width, 64 / playSprite.height);
+      playSprite.width = playSprite.width * scale;
+      playSprite.height = playSprite.height * scale;
+      playSprite.x = GAME_WIDTH / 2 - playSprite.width / 2;
+      playSprite.y = 270;
+      playSprite.eventMode = 'static';
+      playSprite.cursor = 'pointer';
+      playSprite.on('pointerdown', () => {
+        if (this.callbacks.onPlay) this.callbacks.onPlay();
+      });
+      playSprite.on('pointerover', () => { playSprite.alpha = 0.85; });
+      playSprite.on('pointerout', () => { playSprite.alpha = 1; });
+      this.container.addChild(playSprite);
 
-    this._playBtn = new PIXI.Graphics();
-    this._playBtn.beginFill(0xFF3B30);
-    this._playBtn.drawRoundedRect(0, 0, 300, 64, 28);
-    this._playBtn.endFill();
-    this._playBtn.beginFill(0xFFFFFF, 0.08);
-    this._playBtn.drawRoundedRect(8, 6, 284, 20, 10);
-    this._playBtn.endFill();
-    this._playBtn.beginFill(0xFF8C00, 0.15);
-    this._playBtn.drawRect(4, 4, 292, 28);
-    this._playBtn.endFill();
-    this._playBtn.x = GAME_WIDTH / 2 - 150;
-    this._playBtn.y = 268;
-    this._playBtn.eventMode = 'static';
-    this._playBtn.cursor = 'pointer';
-    this._playBtn.on('pointerdown', () => {
-      if (this.callbacks.onPlay) this.callbacks.onPlay();
-    });
-    this._playBtn.on('pointerover', () => { this._playBtn.alpha = 0.9; });
-    this._playBtn.on('pointerout', () => { this._playBtn.alpha = 1; });
-    this.container.addChild(this._playBtn);
+      const playTxt = new PIXI.Text('PLAY', {
+        fontFamily: FONT, fontSize: 28, fill: 0xFFFFFF, fontWeight: 'bold',
+        stroke: 0x000000, strokeThickness: 3,
+      });
+      playTxt.anchor.set(0.5);
+      playTxt.x = GAME_WIDTH / 2;
+      playTxt.y = 270 + playSprite.height / 2;
+      this.container.addChild(playTxt);
+    } catch {
+      const shadow = new PIXI.Graphics();
+      shadow.beginFill(0xC32700, 0.4);
+      shadow.drawRoundedRect(0, 0, 300, 64, 28);
+      shadow.endFill();
+      shadow.x = GAME_WIDTH / 2 - 150;
+      shadow.y = 272;
+      this.container.addChild(shadow);
 
-    const playTxt = new PIXI.Text('PLAY', {
-      fontFamily: FONT, fontSize: 32, fill: 0xFFFFFF, fontWeight: 'bold',
-    });
-    playTxt.anchor.set(0.5);
-    playTxt.x = GAME_WIDTH / 2;
-    playTxt.y = 300;
-    this.container.addChild(playTxt);
+      const btn = new PIXI.Graphics();
+      btn.beginFill(0xFF3B30);
+      btn.drawRoundedRect(0, 0, 300, 64, 28);
+      btn.endFill();
+      btn.beginFill(0xFFFFFF, 0.08);
+      btn.drawRoundedRect(8, 6, 284, 20, 10);
+      btn.endFill();
+      btn.x = GAME_WIDTH / 2 - 150;
+      btn.y = 268;
+      btn.eventMode = 'static';
+      btn.cursor = 'pointer';
+      btn.on('pointerdown', () => {
+        if (this.callbacks.onPlay) this.callbacks.onPlay();
+      });
+      btn.on('pointerover', () => { btn.alpha = 0.9; });
+      btn.on('pointerout', () => { btn.alpha = 1; });
+      this.container.addChild(btn);
+
+      const playTxt = new PIXI.Text('PLAY', {
+        fontFamily: FONT, fontSize: 32, fill: 0xFFFFFF, fontWeight: 'bold',
+      });
+      playTxt.anchor.set(0.5);
+      playTxt.x = GAME_WIDTH / 2;
+      playTxt.y = 300;
+      this.container.addChild(playTxt);
+    }
   }
 
   _buildDailyButton() {
