@@ -4,9 +4,11 @@ import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 const FONT = 'Outfit, Arial, sans-serif';
 
 export class HomePage {
-  constructor(app, container, callbacks) {
+  constructor(app, parentContainer, callbacks) {
     this.app = app;
-    this.container = container;
+    this.parentContainer = parentContainer;
+    this.container = new PIXI.Container();
+    this.parentContainer.addChild(this.container);
     this.callbacks = callbacks;
     this.visible = true;
     this._logoTime = 0;
