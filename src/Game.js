@@ -3,6 +3,7 @@ import { Grid } from './Grid.js';
 import { Piece } from './Piece.js';
 import { Effects } from './Effects.js';
 import { HomePage } from './HomePage.js';
+import { LevelSelect } from './LevelSelect.js';
 import {
   GRID_SIZE, CELL_SIZE,
   COLORS, GAME_WIDTH, GAME_HEIGHT,
@@ -40,13 +41,31 @@ export class Game {
     this._createUI();
     this._createGameOver();
     this._createLevelCompletePopup();
+
+    this._levelSelect = new LevelSelect(app, this.container, {
+      onSelectLevel: (lvl) => this._onLevelSelected(lvl),
+      onBack: () => this._goToMenu(),
+    });
+    this._levelSelect.hide();
+
     this._homePage = new HomePage(app, this.container, {
-      onPlay: () => this.startGame(),
-      onSettings: () => console.log('Settings'),
+      onPlay: () => this._onPlay(),
+      onSettings: () => {},
     });
     this._homePage.updateHighScore(this.highScore);
     this._setupInteraction();
     this._applyTheme();
+  }
+
+  _onPlay() {
+    this.state = 'levelSelect';
+    this._homePage.hide();
+    this._levelSelect.show();
+  }
+
+  _onLevelSelected(level) {
+    this._levelSelect.hide();
+    this.startGame(level);
   }
 
   _createBackground() {
@@ -132,7 +151,7 @@ export class Game {
     this.restartBtn.eventMode = 'static';
     this.restartBtn.cursor = 'pointer';
     this.restartBtn.on('pointerdown', () => {
-      if (this.state === 'playing' && !this.isGameOver) this.startGame();
+      if (this.state === 'playing' && !this.isGameOver) this.startGame(this.level);
     });
     this.container.addChild(this.restartBtn);
 
@@ -237,7 +256,7 @@ export class Game {
     retryText.y = 0;
     retryBtn.addChild(retryText);
 
-    retryBtn.on('pointerdown', () => this.startGame());
+    retryBtn.on('pointerdown', () => this.startGame(this.level));
     retryBtn.on('pointerover', () => { retryBtn.alpha = 0.85; });
     retryBtn.on('pointerout', () => { retryBtn.alpha = 1; });
   }
@@ -420,6 +439,7 @@ export class Game {
     this.activePieceIndex = -1;
     this.gameOverContainer.visible = false;
     this._levelCompleteContainer.visible = false;
+    this._levelSelect.hide();
 
     this.pieces = [];
     this.piecesContainer.removeChildren();
@@ -498,6 +518,7 @@ export class Game {
 
       const cellsPlaced = piece.shapeMatrix.flat().filter(Boolean).length;
       this.score += cellsPlaced;
+      this._homePage.addCoins(cellsPlaced);
 
       this.effects.showFloatingText(centerX, centerY - 10, `+${cellsPlaced}`, 0xffffff, 20);
 
@@ -507,6 +528,9 @@ export class Game {
         let lineScore = 0;
         for (let i = 1; i <= cleared; i++) lineScore += i * 10;
         this.score += lineScore;
+
+        const coinBonus = cleared * 5;
+        this._homePage.addCoins(coinBonus);
 
         const boardCX = this.grid.gridContainer.x + (GRID_SIZE * CELL_SIZE) / 2;
         const boardCY = this.grid.gridContainer.y + (GRID_SIZE * CELL_SIZE) / 2;
@@ -669,6 +693,7 @@ export class Game {
 
   _onLevelUp() {
     this.effects.levelUpCelebration();
+    this._homePage.addCoins(20);
 
     const lvlText = new PIXI.Text(`LEVEL ${this.level}!`, {
       fontFamily: 'Arial, sans-serif', fontSize: 52,
@@ -776,12 +801,12 @@ export class Game {
     }
   }
 
-  startGame() {
+  startGame(selectedLevel) {
     this.state = 'playing';
     this.isGameOver = false;
     this.score = 0;
-    this.level = parseInt(localStorage.getItem('blockblast_startlevel') || '1', 10);
-    if (isNaN(this.level) || this.level < 1) this.level = 1;
+    this.level = selectedLevel || 1;
+    if (this.level < 1) this.level = 1;
     this.level = Math.min(this.level, MAX_LEVEL);
     this.isDragging = false;
     this._levelPendingSpawn = false;
@@ -789,13 +814,6 @@ export class Game {
     this.gameOverContainer.visible = false;
     this._levelCompleteContainer.visible = false;
     this.effects.clear();
-
-    if (this._homePage.visible) {
-      this._fadeOut(this._homePage.container, 20, () => {
-        this._homePage.container.visible = false;
-        this._homePage.visible = false;
-      });
-    }
 
     this.currentTheme = getTheme(this.level);
     this._applyTheme();
@@ -841,9 +859,10 @@ export class Game {
   update(delta) {
     this.effects.update(delta);
     this._homePage.update(delta);
+    this._levelSelect.update(delta);
   }
 
   restart() {
-    this.startGame();
+    this.startGame(this.level);
   }
 }

@@ -45,6 +45,7 @@ export const UI_ASSETS = {
   congratsBanner: 'asset_3',
   coin: 'asset_5',
   back: 'asset_6',
+  music: 'asset_8',
   exit: 'asset_10',
   close: 'asset_11',
   settings: 'asset_12',

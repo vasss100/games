@@ -13,7 +13,12 @@ export class HomePage {
     this.visible = true;
     this._logoTime = 0;
     this._soundOn = true;
+    this._musicOn = true;
     this._loaded = false;
+
+    const saved = parseInt(localStorage.getItem('blockblast_coins') || '1250', 10);
+    this._coinTarget = saved;
+    this._coinDisplay = saved;
 
     this._build();
     this._loaded = true;
@@ -30,6 +35,7 @@ export class HomePage {
     this._buildLogo();
     this._buildCenterIcons();
     this._buildPlayButton();
+    this._buildSettingsPopup();
   }
 
   _drawBackground() {
@@ -176,7 +182,7 @@ export class HomePage {
       settings.eventMode = 'static';
       settings.cursor = 'pointer';
       settings.on('pointerdown', () => {
-        if (this.callbacks.onSettings) this.callbacks.onSettings();
+        this._showSettings();
       });
       this.container.addChild(settings);
     } catch {}
@@ -190,7 +196,7 @@ export class HomePage {
       playSprite.anchor.set(0.5);
       playSprite.scale.set(baseScale);
       playSprite.x = GAME_WIDTH / 2;
-      playSprite.y = GAME_HEIGHT * 0.63 + playSprite.height * baseScale / 2;
+      playSprite.y = GAME_HEIGHT * 0.70 + (playSprite.height * baseScale) / 2;
       playSprite.eventMode = 'static';
       playSprite.cursor = 'pointer';
       playSprite.on('pointerdown', () => {
@@ -210,14 +216,15 @@ export class HomePage {
       this.container.addChild(playTxt);
     } catch {
       const btn = new PIXI.Graphics();
+      const btnW = 280;
       btn.beginFill(0xFF3B30);
-      btn.drawRoundedRect(0, 0, 280, 60, 30);
+      btn.drawRoundedRect(0, 0, btnW, 60, 30);
       btn.endFill();
       btn.beginFill(0xFFFFFF, 0.08);
-      btn.drawRoundedRect(8, 5, 264, 18, 10);
+      btn.drawRoundedRect(8, 5, btnW - 16, 18, 10);
       btn.endFill();
-      btn.x = (GAME_WIDTH - 280) / 2;
-      btn.y = GAME_HEIGHT * 0.63;
+      btn.x = (GAME_WIDTH - btnW) / 2;
+      btn.y = GAME_HEIGHT * 0.70;
       btn.eventMode = 'static';
       btn.cursor = 'pointer';
       btn.on('pointerdown', () => {
@@ -231,10 +238,149 @@ export class HomePage {
         fontFamily: FONT, fontSize: 28, fill: 0xFFFFFF, fontWeight: 'bold',
       });
       playTxt.anchor.set(0.5);
-      playTxt.x = (GAME_WIDTH - 280) / 2 + 140;
-      playTxt.y = GAME_HEIGHT * 0.63 + 30;
+      playTxt.x = (GAME_WIDTH - btnW) / 2 + btnW / 2;
+      playTxt.y = GAME_HEIGHT * 0.70 + 30;
       this.container.addChild(playTxt);
     }
+  }
+
+  _buildSettingsPopup() {
+    this._settingsContainer = new PIXI.Container();
+    this._settingsContainer.visible = false;
+    this.container.addChild(this._settingsContainer);
+
+    const overlay = new PIXI.Graphics();
+    overlay.beginFill(0x000000, 0.65);
+    overlay.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    overlay.endFill();
+    overlay.eventMode = 'static';
+    this._settingsContainer.addChild(overlay);
+
+    const popW = 300;
+    const popH = 180;
+    const popX = (GAME_WIDTH - popW) / 2;
+    const popY = (GAME_HEIGHT - popH) / 2;
+
+    const glass = new PIXI.Graphics();
+    glass.beginFill(0x1E1040, 0.85);
+    glass.lineStyle(1.5, 0x6A4C93, 0.5);
+    glass.drawRoundedRect(0, 0, popW, popH, 20);
+    glass.endFill();
+    glass.beginFill(0xFFFFFF, 0.04);
+    glass.drawRoundedRect(8, 6, popW - 16, 40, 12);
+    glass.endFill();
+    glass.x = popX;
+    glass.y = popY;
+    this._settingsContainer.addChild(glass);
+
+    const settingsTitle = new PIXI.Text('Settings', {
+      fontFamily: FONT, fontSize: 18, fill: 0xFFFFFF, fontWeight: 'bold',
+    });
+    settingsTitle.anchor.set(0.5);
+    settingsTitle.x = popX + popW / 2;
+    settingsTitle.y = popY + 28;
+    this._settingsContainer.addChild(settingsTitle);
+
+    const iconY = popY + 95;
+
+    try {
+      const speakerSprite = PIXI.Sprite.from(UI_ASSETS.speaker);
+      speakerSprite.anchor.set(0.5);
+      speakerSprite.width = 44;
+      speakerSprite.height = 44;
+      speakerSprite.x = popX + popW / 2 - 50;
+      speakerSprite.y = iconY;
+      speakerSprite.eventMode = 'static';
+      speakerSprite.cursor = 'pointer';
+      speakerSprite.on('pointerdown', () => {
+        this._soundOn = !this._soundOn;
+        speakerSprite.alpha = this._soundOn ? 1 : 0.35;
+      });
+      this._settingsContainer.addChild(speakerSprite);
+
+      const sLabel = new PIXI.Text('Sound', {
+        fontFamily: FONT, fontSize: 11, fill: 0xAAAAAA,
+      });
+      sLabel.anchor.set(0.5);
+      sLabel.x = speakerSprite.x;
+      sLabel.y = iconY + 30;
+      this._settingsContainer.addChild(sLabel);
+    } catch {}
+
+    try {
+      const musicSprite = PIXI.Sprite.from(UI_ASSETS.music);
+      musicSprite.anchor.set(0.5);
+      musicSprite.width = 44;
+      musicSprite.height = 44;
+      musicSprite.x = popX + popW / 2 + 50;
+      musicSprite.y = iconY;
+      musicSprite.eventMode = 'static';
+      musicSprite.cursor = 'pointer';
+      musicSprite.on('pointerdown', () => {
+        this._musicOn = !this._musicOn;
+        musicSprite.alpha = this._musicOn ? 1 : 0.35;
+      });
+      this._settingsContainer.addChild(musicSprite);
+
+      const mLabel = new PIXI.Text('Music', {
+        fontFamily: FONT, fontSize: 11, fill: 0xAAAAAA,
+      });
+      mLabel.anchor.set(0.5);
+      mLabel.x = musicSprite.x;
+      mLabel.y = iconY + 30;
+      this._settingsContainer.addChild(mLabel);
+    } catch {}
+
+    try {
+      const closeBtn = PIXI.Sprite.from(UI_ASSETS.close);
+      closeBtn.width = 34;
+      closeBtn.height = 34;
+      closeBtn.x = popX + popW - 17;
+      closeBtn.y = popY - 5;
+      closeBtn.anchor.set(0.5);
+      closeBtn.eventMode = 'static';
+      closeBtn.cursor = 'pointer';
+      closeBtn.on('pointerdown', () => this._hideSettings());
+      this._settingsContainer.addChild(closeBtn);
+
+      const xMark = new PIXI.Text('✕', {
+        fontFamily: FONT, fontSize: 16, fill: 0xFFFFFF, fontWeight: 'bold',
+      });
+      xMark.anchor.set(0.5);
+      xMark.x = 0;
+      xMark.y = 0;
+      closeBtn.addChild(xMark);
+    } catch {
+      const fb = new PIXI.Graphics();
+      fb.beginFill(0xff4444);
+      fb.drawCircle(popX + popW - 17, popY - 5, 17);
+      fb.endFill();
+      fb.eventMode = 'static';
+      fb.cursor = 'pointer';
+      fb.on('pointerdown', () => this._hideSettings());
+      this._settingsContainer.addChild(fb);
+
+      const xMark = new PIXI.Text('✕', {
+        fontFamily: FONT, fontSize: 16, fill: 0xFFFFFF, fontWeight: 'bold',
+      });
+      xMark.anchor.set(0.5);
+      xMark.x = popX + popW - 17;
+      xMark.y = popY - 5;
+      this._settingsContainer.addChild(xMark);
+    }
+  }
+
+  _showSettings() {
+    this._settingsContainer.visible = true;
+  }
+
+  _hideSettings() {
+    this._settingsContainer.visible = false;
+  }
+
+  addCoins(amount) {
+    this._coinTarget += amount;
+    localStorage.setItem('blockblast_coins', String(this._coinTarget));
   }
 
   updateHighScore(score) {
@@ -258,12 +404,24 @@ export class HomePage {
     this.container.visible = false;
     this.visible = false;
     this._pendingShow = false;
+    this._settingsContainer.visible = false;
   }
 
   update(delta) {
     if (!this.visible || !this._loaded) return;
     this._logoTime += delta * 0.03;
     this._logo.y = this._logoBaseY + Math.sin(this._logoTime) * 4;
+
+    if (this._coinDisplay !== this._coinTarget) {
+      const diff = this._coinTarget - this._coinDisplay;
+      const step = Math.max(1, Math.ceil(Math.abs(diff) * 0.12 * delta));
+      if (Math.abs(diff) < step) {
+        this._coinDisplay = this._coinTarget;
+      } else {
+        this._coinDisplay += Math.sign(diff) * step;
+      }
+      this._coinText.text = `${Math.floor(this._coinDisplay)}`;
+    }
   }
 
   destroy() {}
