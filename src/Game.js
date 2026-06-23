@@ -4,23 +4,20 @@ import { Piece } from './Piece.js';
 import { Effects } from './Effects.js';
 import { HomePage } from './HomePage.js';
 import {
-  GRID_SIZE, CELL_SIZE, BOARD_OFFSET_X, BOARD_OFFSET_Y,
+  GRID_SIZE, CELL_SIZE,
   PIECE_AREA_Y, COLORS, GAME_WIDTH, GAME_HEIGHT,
   getShapesForLevel, NUM_PIECES_PER_TURN, MAX_LEVEL,
-  getTheme, getScoreForLevel, getAssetName,
+  getTheme, getScoreForLevel,
 } from './constants.js';
 
 export class Game {
-  constructor(app, engine, sheetTextures = null) {
+  constructor(app) {
     this.app = app;
-    this.engine = engine;
     this.state = 'menu';
     this.score = 0;
     this.level = 1;
-    this.sheetTextures = sheetTextures;
     this.highScore = parseInt(localStorage.getItem('blockblast_highscore') || '0', 10);
     this.highLevel = parseInt(localStorage.getItem('blockblast_highlevel') || '1', 10);
-    this.grid = new Grid();
     this.pieces = [];
     this.activePieceIndex = -1;
     this.dragStart = { x: 0, y: 0 };
@@ -32,9 +29,13 @@ export class Game {
     this.container = new PIXI.Container();
     app.stage.addChild(this.container);
 
+    this.grid = new Grid(app, this.container);
+
+    this.piecesContainer = new PIXI.Container();
+    this.container.addChild(this.piecesContainer);
+
     this.effects = new Effects(this.container);
     this._createBackground();
-    this._createGridUI();
     this._createUI();
     this._homePage = new HomePage(app, this.container, {
       onPlay: () => this.startGame(),
@@ -51,31 +52,7 @@ export class Game {
 
   _createBackground() {
     this.bgGraphics = new PIXI.Graphics();
-    this.container.addChild(this.bgGraphics);
-
-    this.boardDecor = new PIXI.Graphics();
-    this.container.addChild(this.boardDecor);
-  }
-
-  _createGridUI() {
-    this.gridContainer = new PIXI.Container();
-    this.container.addChild(this.gridContainer);
-
-    this.boardBg = new PIXI.Graphics();
-    this.gridContainer.addChild(this.boardBg);
-
-    this.cellGraphics = [];
-    for (let r = 0; r < GRID_SIZE; r++) {
-      this.cellGraphics[r] = [];
-      for (let c = 0; c < GRID_SIZE; c++) {
-        const g = new PIXI.Graphics();
-        this.gridContainer.addChild(g);
-        this.cellGraphics[r][c] = g;
-      }
-    }
-
-    this.gridBorder = new PIXI.Graphics();
-    this.gridContainer.addChild(this.gridBorder);
+    this.container.addChildAt(this.bgGraphics, 0);
   }
 
   _createUI() {
@@ -84,7 +61,7 @@ export class Game {
       fill: COLORS.uiText, fontWeight: 'bold',
       stroke: 0x000000, strokeThickness: 2,
     });
-    this.scoreText.x = BOARD_OFFSET_X;
+    this.scoreText.x = 16;
     this.scoreText.y = 12;
     this.container.addChild(this.scoreText);
 
@@ -93,7 +70,7 @@ export class Game {
       fill: COLORS.uiText,
     });
     this.highScoreText.alpha = 0.6;
-    this.highScoreText.x = BOARD_OFFSET_X;
+    this.highScoreText.x = 16;
     this.highScoreText.y = 36;
     this.container.addChild(this.highScoreText);
 
@@ -102,18 +79,18 @@ export class Game {
       fill: COLORS.uiAccent, fontWeight: 'bold',
       stroke: 0x000000, strokeThickness: 2,
     });
-    this.levelText.x = GAME_WIDTH - BOARD_OFFSET_X - 80;
+    this.levelText.x = GAME_WIDTH - 90;
     this.levelText.y = 12;
     this.container.addChild(this.levelText);
 
     this.progressBg = new PIXI.Graphics();
     this.progressBg.beginFill(0x000000, 0.4);
-    this.progressBg.drawRoundedRect(GAME_WIDTH - BOARD_OFFSET_X - 80, 34, 72, 10, 5);
+    this.progressBg.drawRoundedRect(GAME_WIDTH - 90, 34, 72, 10, 5);
     this.progressBg.endFill();
     this.container.addChild(this.progressBg);
 
     this.progressBar = new PIXI.Graphics();
-    this.progressBar.x = GAME_WIDTH - BOARD_OFFSET_X - 80;
+    this.progressBar.x = GAME_WIDTH - 90;
     this.progressBar.y = 34;
     this.container.addChild(this.progressBar);
 
@@ -121,7 +98,7 @@ export class Game {
       fontFamily: 'Arial, sans-serif', fontSize: 9,
       fill: 0xffffff,
     });
-    this.progressText.x = GAME_WIDTH - BOARD_OFFSET_X - 44;
+    this.progressText.x = GAME_WIDTH - 54;
     this.progressText.y = 35;
     this.progressText.anchor.set(0.5, 0);
     this.container.addChild(this.progressText);
@@ -146,12 +123,9 @@ export class Game {
     });
     this.comboText.anchor.set(0.5);
     this.comboText.x = GAME_WIDTH / 2;
-    this.comboText.y = BOARD_OFFSET_Y + GRID_SIZE * CELL_SIZE + 30;
+    this.comboText.y = this.grid.gridContainer.y + GRID_SIZE * CELL_SIZE + 30;
     this.comboText.alpha = 0;
     this.container.addChild(this.comboText);
-
-    this.piecesContainer = new PIXI.Container();
-    this.container.addChild(this.piecesContainer);
   }
 
   _createGameOver() {
@@ -250,29 +224,6 @@ export class Game {
       this.bgGraphics.endFill();
     }
 
-    this.boardDecor.clear();
-    this.boardDecor.beginFill(theme.accent, 0.05);
-    this.boardDecor.drawRoundedRect(
-      BOARD_OFFSET_X - 8, BOARD_OFFSET_Y - 8,
-      GRID_SIZE * CELL_SIZE + 16, GRID_SIZE * CELL_SIZE + 16, 12
-    );
-    this.boardDecor.endFill();
-
-    this.boardBg.clear();
-    this.boardBg.beginFill(theme.boardBg, 0.9);
-    this.boardBg.drawRoundedRect(
-      BOARD_OFFSET_X - 4, BOARD_OFFSET_Y - 4,
-      GRID_SIZE * CELL_SIZE + 8, GRID_SIZE * CELL_SIZE + 8, 8
-    );
-    this.boardBg.endFill();
-
-    this.gridBorder.clear();
-    this.gridBorder.lineStyle(2, theme.accent, 0.6);
-    this.gridBorder.drawRoundedRect(
-      BOARD_OFFSET_X, BOARD_OFFSET_Y,
-      GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE, 6
-    );
-
     this.levelText.style.fill = theme.accent;
     this.restartBtn.style.fill = theme.accent;
   }
@@ -281,12 +232,10 @@ export class Game {
     const needed = getScoreForLevel(this.level);
     const prevNeeded = this.level > 1 ? getScoreForLevel(this.level - 1) : 0;
     const progress = Math.min(1, (this.score - prevNeeded) / (needed - prevNeeded));
-
     this.progressBar.clear();
     this.progressBar.beginFill(this.currentTheme.accent, 0.8);
     this.progressBar.drawRoundedRect(0, 0, 72 * progress, 10, 5);
     this.progressBar.endFill();
-
     const remaining = Math.max(0, needed - this.score);
     this.progressText.text = `${remaining}`;
   }
@@ -347,19 +296,19 @@ export class Game {
     if (bestPos && this.grid.canPlace(piece.shapeMatrix, bestPos.row, bestPos.col)) {
       this.grid.placePiece(piece.shapeMatrix, bestPos.row, bestPos.col, piece.colorIndex);
 
-      const cx = BOARD_OFFSET_X + bestPos.col * CELL_SIZE;
-      const cy = BOARD_OFFSET_Y + bestPos.row * CELL_SIZE;
-      const centerX = cx + (piece.cols * CELL_SIZE) / 2;
-      const centerY = cy + (piece.rows * CELL_SIZE) / 2;
+      const gx = this.grid.gridContainer.x + bestPos.col * CELL_SIZE;
+      const gy = this.grid.gridContainer.y + bestPos.row * CELL_SIZE;
+      const centerX = gx + (piece.cols * CELL_SIZE) / 2;
+      const centerY = gy + (piece.rows * CELL_SIZE) / 2;
 
-      this.effects.emitParticles(centerX, centerY, piece.color, 10, 3, 3, 25);
-      this._animatePiecePlace(piece, cx, cy);
-      this._updateGridVisual();
+      this.effects.emitParticles(centerX, centerY, 0xffffff, 10, 3, 3, 25);
+      this._animatePiecePlace(piece, gx, gy);
+      this.grid.updateCells();
 
       const cellsPlaced = piece.shapeMatrix.flat().filter(Boolean).length;
       this.score += cellsPlaced;
 
-      this.effects.showFloatingText(centerX, centerY - 10, `+${cellsPlaced}`, piece.color, 20);
+      this.effects.showFloatingText(centerX, centerY - 10, `+${cellsPlaced}`, 0xffffff, 20);
 
       const { rows, cols } = this.grid.getCompletedLines();
       if (rows.length > 0 || cols.length > 0) {
@@ -368,8 +317,8 @@ export class Game {
         for (let i = 1; i <= cleared; i++) lineScore += i * 10;
         this.score += lineScore;
 
-        const boardCX = BOARD_OFFSET_X + (GRID_SIZE * CELL_SIZE) / 2;
-        const boardCY = BOARD_OFFSET_Y + (GRID_SIZE * CELL_SIZE) / 2;
+        const boardCX = this.grid.gridContainer.x + (GRID_SIZE * CELL_SIZE) / 2;
+        const boardCY = this.grid.gridContainer.y + (GRID_SIZE * CELL_SIZE) / 2;
 
         if (cleared >= 3) {
           this.effects.emitBurst(boardCX, boardCY, 0xFFD54F, 3);
@@ -385,13 +334,13 @@ export class Game {
 
         this.effects.emitLineClear(
           rows, cols, 0xffffff, CELL_SIZE,
-          BOARD_OFFSET_X, BOARD_OFFSET_Y, GRID_SIZE
+          this.grid.gridContainer.x, this.grid.gridContainer.y, GRID_SIZE
         );
         this.effects.showFloatingText(boardCX, boardCY, `+${lineScore}`, 0xFFD54F, 28);
 
         this._animateLineClear(rows, cols);
         this.grid.clearLines(rows, cols);
-        this._updateGridVisual();
+        this.grid.updateCells();
       }
 
       piece.placed = true;
@@ -421,6 +370,8 @@ export class Game {
   }
 
   _animateLineClear(rows, cols) {
+    const ox = this.grid.gridContainer.x;
+    const oy = this.grid.gridContainer.y;
     const flashCells = [];
     for (const r of rows) {
       for (let c = 0; c < GRID_SIZE; c++) flashCells.push({ row: r, col: c });
@@ -433,22 +384,18 @@ export class Game {
 
     const flashGraphics = flashCells.map(({ row, col }) => {
       const g = new PIXI.Graphics();
-      const x = BOARD_OFFSET_X + col * CELL_SIZE;
-      const y = BOARD_OFFSET_Y + row * CELL_SIZE;
       g.beginFill(0xffffff);
-      g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
+      g.drawRoundedRect(ox + col * CELL_SIZE + 1, oy + row * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
       g.endFill();
       g.alpha = 0;
-      this.gridContainer.addChild(g);
+      this.container.addChild(g);
       return g;
     });
 
     let frame = 0;
     const animate = () => {
       if (this.isGameOver || this.state !== 'playing') {
-        for (const g of flashGraphics) {
-          if (g.parent) this.gridContainer.removeChild(g);
-        }
+        for (const g of flashGraphics) { if (g.parent) this.container.removeChild(g); }
         return;
       }
       frame++;
@@ -456,9 +403,7 @@ export class Game {
         g.alpha = Math.sin(frame * 0.3) * 0.5 + 0.3;
       }
       if (frame > 15) {
-        for (const g of flashGraphics) {
-          if (g.parent) this.gridContainer.removeChild(g);
-        }
+        for (const g of flashGraphics) { if (g.parent) this.container.removeChild(g); }
         return;
       }
       this.app.ticker.addOnce(animate);
@@ -469,7 +414,6 @@ export class Game {
   _showCombo(text, color) {
     if (this._comboAnimating) return;
     this._comboAnimating = true;
-
     this.comboText.text = text;
     this.comboText.style.fill = color;
     this.comboText.alpha = 1;
@@ -481,10 +425,7 @@ export class Game {
       this.comboText.scale.set(Math.min(1.2, 0.5 + frame * 0.07));
       if (frame > 50) {
         this.comboText.alpha -= 0.03;
-        if (this.comboText.alpha <= 0) {
-          this._comboAnimating = false;
-          return;
-        }
+        if (this.comboText.alpha <= 0) { this._comboAnimating = false; return; }
       }
       this.app.ticker.addOnce(animate);
     };
@@ -497,27 +438,19 @@ export class Game {
     for (let r = 0; r < piece.rows; r++) {
       for (let c = 0; c < piece.cols; c++) {
         if (!piece.shapeMatrix[r][c]) continue;
-        const x = targetX + c * CELL_SIZE;
-        const y = targetY + r * CELL_SIZE;
-        g.beginFill(piece.color, 0.5);
-        g.drawRoundedRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, 6);
+        g.beginFill(0xffffff, 0.5);
+        g.drawRoundedRect(targetX + c * CELL_SIZE + 2, targetY + r * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4, 6);
         g.endFill();
       }
     }
     g.alpha = 0;
-    this.gridContainer.addChild(g);
+    this.container.addChild(g);
     let frame = 0;
     const animate = () => {
-      if (this.isGameOver || this.state !== 'playing') {
-        if (g.parent) this.gridContainer.removeChild(g);
-        return;
-      }
+      if (this.isGameOver || this.state !== 'playing') { if (g.parent) this.container.removeChild(g); return; }
       frame++;
       g.alpha = frame / 8;
-      if (frame >= 8) {
-        this.gridContainer.removeChild(g);
-        return;
-      }
+      if (frame >= 8) { this.container.removeChild(g); return; }
       this.app.ticker.addOnce(animate);
     };
     this.app.ticker.addOnce(animate);
@@ -529,7 +462,7 @@ export class Game {
       this.level++;
       this.currentTheme = getTheme(this.level);
       this._applyTheme();
-      this._updateGridVisual();
+      this.grid.updateCells();
       this._onLevelUp();
       if (this.score < getScoreForLevel(this.level)) break;
     }
@@ -583,7 +516,6 @@ export class Game {
     if (this.level > this.highLevel) {
       this.highLevel = this.level;
       localStorage.setItem('blockblast_highlevel', String(this.highLevel));
-      this.highScoreText.text = `Best: ${this.highScore}`;
     }
   }
 
@@ -596,62 +528,25 @@ export class Game {
     }
   }
 
-  _updateGridVisual() {
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
-        const g = this.cellGraphics[r][c];
-        const val = this.grid.cells[r][c];
-        g.clear();
-
-        const x = BOARD_OFFSET_X + c * CELL_SIZE;
-        const y = BOARD_OFFSET_Y + r * CELL_SIZE;
-
-        if (val !== null) {
-          const spriteName = getAssetName(val);
-          const tex = this.sheetTextures ? this.sheetTextures[spriteName] : null;
-          if (tex) {
-            const sprite = new PIXI.Sprite(tex);
-            sprite.x = x + 2;
-            sprite.y = y + 2;
-            sprite.width = CELL_SIZE - 4;
-            sprite.height = CELL_SIZE - 4;
-            g.addChild(sprite);
-          } else {
-            const color = COLORS.cellOccupied[val % COLORS.cellOccupied.length];
-            g.beginFill(color, 0.9);
-            g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
-            g.endFill();
-            g.beginFill(0xffffff, 0.12);
-            g.drawRoundedRect(x + 4, y + 4, CELL_SIZE - 10, (CELL_SIZE - 2) / 3, 3);
-            g.endFill();
-          }
-        } else {
-          g.lineStyle(1, COLORS.gridLine, 0.3);
-          g.beginFill(COLORS.cellEmpty);
-          g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 3);
-          g.endFill();
-        }
-      }
-    }
-  }
-
   _getSlotPositions() {
-    const totalPieceWidth = this.pieces.reduce((w, p) => w + p.visualWidth, 0);
-    const availableWidth = GAME_WIDTH - 40;
-    const scale = totalPieceWidth > availableWidth ? availableWidth / totalPieceWidth : 1;
+    const slotY = this.grid.gridContainer.y + GRID_SIZE * CELL_SIZE + 40;
+
+    const totalW = this.pieces.reduce((w, p) => w + p.visualWidth, 0);
+    const availW = GAME_WIDTH - 40;
+    const scale = totalW > availW ? availW / totalW : 1;
 
     for (const piece of this.pieces) {
       piece.container.scale.set(scale);
     }
 
-    const scaledWidths = this.pieces.map(p => p.visualWidth * scale);
-    const totalScaled = scaledWidths.reduce((a, b) => a + b, 0);
-    const gap = Math.min(15, (availableWidth - totalScaled) / (this.pieces.length + 1));
+    const widths = this.pieces.map(p => p.visualWidth * scale);
+    const total = widths.reduce((a, b) => a + b, 0);
+    const gap = Math.min(15, (availW - total) / (this.pieces.length + 1));
     const positions = [];
-    let currentX = (GAME_WIDTH - totalScaled - gap * (this.pieces.length - 1)) / 2;
+    let curX = (GAME_WIDTH - total - gap * (this.pieces.length - 1)) / 2;
     for (let i = 0; i < this.pieces.length; i++) {
-      positions.push({ x: currentX, y: PIECE_AREA_Y });
-      currentX += scaledWidths[i] + gap;
+      positions.push({ x: curX, y: slotY });
+      curX += widths[i] + gap;
     }
     return positions;
   }
@@ -665,8 +560,8 @@ export class Game {
 
     for (let i = 0; i < NUM_PIECES_PER_TURN; i++) {
       const shapeDef = shuffled[i % shuffled.length];
-      const colorIndex = Math.floor(Math.random() * COLORS.cellOccupied.length);
-      const piece = new Piece(shapeDef.shape, colorIndex, this.grid, this.sheetTextures);
+      const colorIndex = Math.floor(Math.random() * 17);
+      const piece = new Piece(shapeDef.shape, colorIndex, this.grid);
       this.pieces.push(piece);
     }
 
@@ -698,7 +593,7 @@ export class Game {
     this._applyTheme();
 
     this.grid.cells = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
-    this._updateGridVisual();
+    this.grid.updateCells();
     this._updateScore();
 
     this.pieces = [];

@@ -1,14 +1,54 @@
-import { GRID_SIZE, CELL_SIZE, BOARD_OFFSET_X, BOARD_OFFSET_Y } from './constants.js';
+import * as PIXI from 'pixi.js';
+import { GRID_SIZE, CELL_SIZE, COLORS } from './constants.js';
 
 export class Grid {
-  constructor() {
+  constructor(app, parentContainer) {
     this.cells = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+    this.app = app;
+
+    this.gridContainer = new PIXI.Container();
+    parentContainer.addChild(this.gridContainer);
+
+    const gridPixelSize = GRID_SIZE * CELL_SIZE;
+    this.gridContainer.x = (app.screen.width - gridPixelSize) / 2;
+    this.gridContainer.y = (app.screen.height - gridPixelSize) / 3;
+
+    this.cellGraphics = [];
+    for (let r = 0; r < GRID_SIZE; r++) {
+      this.cellGraphics[r] = [];
+      for (let c = 0; c < GRID_SIZE; c++) {
+        const cell = new PIXI.Container();
+        this.gridContainer.addChild(cell);
+        this.cellGraphics[r][c] = cell;
+      }
+    }
+
+    this._drawEmptyLayout();
   }
 
-  get x() { return BOARD_OFFSET_X; }
-  get y() { return BOARD_OFFSET_Y; }
-  get width() { return GRID_SIZE * CELL_SIZE; }
-  get height() { return GRID_SIZE * CELL_SIZE; }
+  get x() { return this.gridContainer.x; }
+  get y() { return this.gridContainer.y; }
+
+  _drawEmptyLayout() {
+    const border = new PIXI.Graphics();
+    border.lineStyle(2, COLORS.gridLine, 0.5);
+    border.drawRoundedRect(-2, -2, GRID_SIZE * CELL_SIZE + 4, GRID_SIZE * CELL_SIZE + 4, 8);
+    this.gridContainer.addChildAt(border, 0);
+
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        const cell = this.cellGraphics[r][c];
+        const x = c * CELL_SIZE;
+        const y = r * CELL_SIZE;
+        const bg = new PIXI.Graphics();
+        bg.lineStyle(1, COLORS.cellEmptyBorder, 0.25);
+        bg.beginFill(COLORS.cellEmpty, 0.6);
+        bg.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
+        bg.endFill();
+        cell.addChild(bg);
+      }
+    }
+  }
 
   canPlace(shape, row, col) {
     for (let r = 0; r < shape.length; r++) {
@@ -35,42 +75,27 @@ export class Grid {
   getCompletedLines() {
     const rows = [];
     const cols = [];
-
     for (let r = 0; r < GRID_SIZE; r++) {
       if (this.cells[r].every(c => c !== null)) rows.push(r);
     }
-
     for (let c = 0; c < GRID_SIZE; c++) {
       if (this.cells.every(row => row[c] !== null)) cols.push(c);
     }
-
     return { rows, cols };
   }
 
   clearLines(rows, cols) {
     for (const r of rows) {
-      for (let c = 0; c < GRID_SIZE; c++) {
-        this.cells[r][c] = null;
-      }
+      for (let c = 0; c < GRID_SIZE; c++) this.cells[r][c] = null;
     }
     for (const c of cols) {
-      for (let r = 0; r < GRID_SIZE; r++) {
-        this.cells[r][c] = null;
-      }
+      for (let r = 0; r < GRID_SIZE; r++) this.cells[r][c] = null;
     }
-    return rows.length + cols.length;
-  }
-
-  getCellPixelPos(row, col) {
-    return {
-      x: BOARD_OFFSET_X + col * CELL_SIZE,
-      y: BOARD_OFFSET_Y + row * CELL_SIZE,
-    };
   }
 
   pixelToGrid(pixelX, pixelY) {
-    const col = Math.floor((pixelX - BOARD_OFFSET_X) / CELL_SIZE);
-    const row = Math.floor((pixelY - BOARD_OFFSET_Y) / CELL_SIZE);
+    const col = Math.floor((pixelX - this.gridContainer.x) / CELL_SIZE);
+    const row = Math.floor((pixelY - this.gridContainer.y) / CELL_SIZE);
     if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return null;
     return { row, col };
   }
@@ -86,13 +111,32 @@ export class Grid {
     return false;
   }
 
-  countFilledCells() {
-    let count = 0;
+  updateCells() {
     for (let r = 0; r < GRID_SIZE; r++) {
       for (let c = 0; c < GRID_SIZE; c++) {
-        if (this.cells[r][c] !== null) count++;
+        const cell = this.cellGraphics[r][c];
+        const val = this.cells[r][c];
+        cell.removeChildren();
+
+        const x = c * CELL_SIZE;
+        const y = r * CELL_SIZE;
+
+        if (val !== null) {
+          const sprite = PIXI.Sprite.from(`asset_${(val % 17) + 1}`);
+          sprite.width = CELL_SIZE - 4;
+          sprite.height = CELL_SIZE - 4;
+          sprite.x = x + 2;
+          sprite.y = y + 2;
+          cell.addChild(sprite);
+        } else {
+          const bg = new PIXI.Graphics();
+          bg.lineStyle(1, COLORS.cellEmptyBorder, 0.25);
+          bg.beginFill(COLORS.cellEmpty, 0.6);
+          bg.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
+          bg.endFill();
+          cell.addChild(bg);
+        }
       }
     }
-    return count;
   }
 }

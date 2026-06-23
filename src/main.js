@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { Game } from './Game.js';
-import { GAME_WIDTH, GAME_HEIGHT, ATLAS_PATH } from './constants.js';
+import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 
 async function init() {
   const app = new PIXI.Application({
@@ -14,15 +14,13 @@ async function init() {
 
   document.body.appendChild(app.view);
 
-  let sheetTextures = null;
   try {
-    const sheet = await PIXI.Assets.load(ATLAS_PATH);
-    sheetTextures = sheet.textures;
+    await PIXI.Assets.load('assets/game_master_sheet.json');
   } catch (e) {
-    console.warn('Failed to load spritesheet, using fallback colors:', e);
+    console.warn('Spritesheet load failed, using fallback colors:', e);
   }
 
-  const game = new Game(app, null, sheetTextures);
+  const game = new Game(app);
 
   app.ticker.add((delta) => {
     game.update(delta);

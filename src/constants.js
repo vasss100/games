@@ -33,7 +33,7 @@ export const TOTAL_ASSET_FRAMES = 17;
 export const ASSET_NAMES = Array.from({ length: TOTAL_ASSET_FRAMES }, (_, i) => `asset_${i + 1}`);
 
 export function getAssetName(index) {
-  return ASSET_NAMES[(index % TOTAL_ASSET_FRAMES) + TOTAL_ASSET_FRAMES - 1] || ASSET_NAMES[0];
+  return ASSET_NAMES[index % TOTAL_ASSET_FRAMES];
 }
 
 const THEMES = [
