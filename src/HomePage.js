@@ -4,19 +4,19 @@ import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 const FONT = 'Outfit, Arial, sans-serif';
 
 const ASSETS = {
-  playBtn: '/assets/play_button.png',
-  playBtnShadow: '/assets/play_button_shadow.png',
-  dailyBtn: '/assets/daily_button.png',
-  adventureBtn: '/assets/adventure_button.png',
-  badgeNew: '/assets/badge_new.png',
-  hsPanel: '/assets/hs_panel.png',
-  headerBg: '/assets/header_bg.png',
-  footerBg: '/assets/footer_bg.png',
-  glowCircle: '/assets/glow_circle.png',
-  coinIcon: '/assets/coin_icon.png',
-  diamondIcon: '/assets/diamond_icon.png',
-  settingsIcon: '/assets/settings_icon.png',
-  bgGradient: '/assets/bg_gradient.png',
+  playBtn: './assets/play_button.png',
+  playBtnShadow: './assets/play_button_shadow.png',
+  dailyBtn: './assets/daily_button.png',
+  adventureBtn: './assets/adventure_button.png',
+  badgeNew: './assets/badge_new.png',
+  hsPanel: './assets/hs_panel.png',
+  headerBg: './assets/header_bg.png',
+  footerBg: './assets/footer_bg.png',
+  glowCircle: './assets/glow_circle.png',
+  coinIcon: './assets/coin_icon.png',
+  diamondIcon: './assets/diamond_icon.png',
+  settingsIcon: './assets/settings_icon.png',
+  bgGradient: './assets/bg_gradient.png',
 };
 
 export class HomePage {

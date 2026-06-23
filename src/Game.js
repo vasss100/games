@@ -61,7 +61,7 @@ export class Game {
   }
 
   _loadBoardTexture() {
-    PIXI.Assets.add('board_bg', '/assets/board_bg.png');
+    PIXI.Assets.add('board_bg', './assets/board_bg.png');
     PIXI.Assets.load('board_bg').then((tex) => {
       this._boardTexture = tex;
       this._boardTextureLoaded = true;
@@ -73,7 +73,7 @@ export class Game {
 
   async _loadSpriteSheet() {
     try {
-      const sheet = await PIXI.Assets.load('/assets/game_master_sheet.json');
+      const sheet = await PIXI.Assets.load('./assets/game_master_sheet.json');
       this.sheetTextures = sheet.textures;
     } catch (e) {
       console.warn('Failed to load spritesheet:', e);
