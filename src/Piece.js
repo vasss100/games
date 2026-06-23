@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import { CELL_SIZE, COLORS } from './constants.js';
 
 export class Piece {
-  constructor(shapeMatrix, colorIndex, grid) {
+  constructor(shapeMatrix, colorIndex, grid, sheetTextures) {
     this.shapeMatrix = shapeMatrix;
     this.colorIndex = colorIndex;
     this.color = COLORS.cellOccupied[colorIndex % COLORS.cellOccupied.length];
@@ -10,6 +10,7 @@ export class Piece {
     this.placed = false;
     this.dragging = false;
     this.dragOffset = { x: 0, y: 0 };
+    this.sheetTextures = sheetTextures;
 
     this.rows = shapeMatrix.length;
     this.cols = shapeMatrix[0].length;
@@ -33,17 +34,30 @@ export class Piece {
         const inset = 2;
         const cell = new PIXI.Container();
 
-        const g = new PIXI.Graphics();
-        g.beginFill(this.color, 1);
-        g.drawRoundedRect(x + inset, y + inset, CELL_SIZE - inset * 2, CELL_SIZE - inset * 2, 6);
-        g.endFill();
-        cell.addChild(g);
+        if (this.sheetTextures) {
+          const spriteName = `asset_${(this.colorIndex % 17) + 1}`;
+          const tex = this.sheetTextures[spriteName];
+          if (tex) {
+            const sprite = new PIXI.Sprite(tex);
+            sprite.x = x + inset;
+            sprite.y = y + inset;
+            sprite.width = CELL_SIZE - inset * 2;
+            sprite.height = CELL_SIZE - inset * 2;
+            cell.addChild(sprite);
+          }
+        } else {
+          const g = new PIXI.Graphics();
+          g.beginFill(this.color, 1);
+          g.drawRoundedRect(x + inset, y + inset, CELL_SIZE - inset * 2, CELL_SIZE - inset * 2, 6);
+          g.endFill();
+          cell.addChild(g);
 
-        const shine = new PIXI.Graphics();
-        shine.beginFill(0xffffff, 0.15);
-        shine.drawRoundedRect(x + inset + 2, y + inset + 2, CELL_SIZE - inset * 2 - 8, (CELL_SIZE - inset * 2) / 3, 3);
-        shine.endFill();
-        cell.addChild(shine);
+          const shine = new PIXI.Graphics();
+          shine.beginFill(0xffffff, 0.15);
+          shine.drawRoundedRect(x + inset + 2, y + inset + 2, CELL_SIZE - inset * 2 - 8, (CELL_SIZE - inset * 2) / 3, 3);
+          shine.endFill();
+          cell.addChild(shine);
+        }
 
         this.container.addChild(cell);
       }

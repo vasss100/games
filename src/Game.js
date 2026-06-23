@@ -28,6 +28,7 @@ export class Game {
     this.currentTheme = getTheme(1);
     this._comboAnimating = false;
     this._boardTextureLoaded = false;
+    this.sheetTextures = null;
 
     this.container = new PIXI.Container();
     app.stage.addChild(this.container);
@@ -37,6 +38,7 @@ export class Game {
     this._createGridUI();
     this._createUI();
     this._loadBoardTexture();
+    this._loadSpriteSheet();
     this._homePage = new HomePage(app, this.container, {
       onPlay: () => this.startGame(),
       onSettings: () => console.log('Settings'),
@@ -67,6 +69,15 @@ export class Game {
         this.boardSprite.texture = tex;
       }
     }).catch(() => {});
+  }
+
+  async _loadSpriteSheet() {
+    try {
+      const sheet = await PIXI.Assets.load('/assets/game_master_sheet.json');
+      this.sheetTextures = sheet.textures;
+    } catch (e) {
+      console.warn('Failed to load spritesheet:', e);
+    }
   }
 
   _createGridUI() {
@@ -635,13 +646,26 @@ export class Game {
         const y = BOARD_OFFSET_Y + r * CELL_SIZE;
 
         if (val !== null) {
-          const color = COLORS.cellOccupied[val % COLORS.cellOccupied.length];
-          g.beginFill(color, 0.9);
-          g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
-          g.endFill();
-          g.beginFill(0xffffff, 0.12);
-          g.drawRoundedRect(x + 4, y + 4, CELL_SIZE - 10, (CELL_SIZE - 2) / 3, 3);
-          g.endFill();
+          if (this.sheetTextures) {
+            const spriteName = `asset_${(val % 17) + 1}`;
+            const tex = this.sheetTextures[spriteName];
+            if (tex) {
+              const sprite = new PIXI.Sprite(tex);
+              sprite.x = x + 2;
+              sprite.y = y + 2;
+              sprite.width = CELL_SIZE - 4;
+              sprite.height = CELL_SIZE - 4;
+              g.addChild(sprite);
+            }
+          } else {
+            const color = COLORS.cellOccupied[val % COLORS.cellOccupied.length];
+            g.beginFill(color, 0.9);
+            g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
+            g.endFill();
+            g.beginFill(0xffffff, 0.12);
+            g.drawRoundedRect(x + 4, y + 4, CELL_SIZE - 10, (CELL_SIZE - 2) / 3, 3);
+            g.endFill();
+          }
         } else {
           g.lineStyle(1, COLORS.gridLine, 0.3);
           g.beginFill(COLORS.cellEmpty);
@@ -683,7 +707,7 @@ export class Game {
     for (let i = 0; i < NUM_PIECES_PER_TURN; i++) {
       const shapeDef = shuffled[i % shuffled.length];
       const colorIndex = Math.floor(Math.random() * COLORS.cellOccupied.length);
-      const piece = new Piece(shapeDef.shape, colorIndex, this.grid);
+      const piece = new Piece(shapeDef.shape, colorIndex, this.grid, this.sheetTextures);
       this.pieces.push(piece);
     }
 
