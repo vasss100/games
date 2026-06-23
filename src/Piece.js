@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { CELL_SIZE, COLORS } from './constants.js';
+import { CELL_SIZE, COLORS, getAssetName } from './constants.js';
 
 export class Piece {
   constructor(shapeMatrix, colorIndex, grid, sheetTextures) {
@@ -34,17 +34,15 @@ export class Piece {
         const inset = 2;
         const cell = new PIXI.Container();
 
-        if (this.sheetTextures) {
-          const spriteName = `asset_${(this.colorIndex % 17) + 1}`;
-          const tex = this.sheetTextures[spriteName];
-          if (tex) {
-            const sprite = new PIXI.Sprite(tex);
-            sprite.x = x + inset;
-            sprite.y = y + inset;
-            sprite.width = CELL_SIZE - inset * 2;
-            sprite.height = CELL_SIZE - inset * 2;
-            cell.addChild(sprite);
-          }
+        const spriteName = getAssetName(this.colorIndex);
+        const tex = this.sheetTextures ? this.sheetTextures[spriteName] : null;
+        if (tex) {
+          const sprite = new PIXI.Sprite(tex);
+          sprite.x = x + inset;
+          sprite.y = y + inset;
+          sprite.width = CELL_SIZE - inset * 2;
+          sprite.height = CELL_SIZE - inset * 2;
+          cell.addChild(sprite);
         } else {
           const g = new PIXI.Graphics();
           g.beginFill(this.color, 1);
@@ -151,7 +149,7 @@ export class Piece {
 
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
-        if (!this.grid.canPlace(this.shapeMatrix, r, c, this.colorIndex)) continue;
+        if (!this.grid.canPlace(this.shapeMatrix, r, c)) continue;
 
         const gx = this.grid.x + c * CELL_SIZE;
         const gy = this.grid.y + r * CELL_SIZE;

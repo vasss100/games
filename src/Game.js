@@ -7,16 +7,17 @@ import {
   GRID_SIZE, CELL_SIZE, BOARD_OFFSET_X, BOARD_OFFSET_Y,
   PIECE_AREA_Y, COLORS, GAME_WIDTH, GAME_HEIGHT,
   getShapesForLevel, NUM_PIECES_PER_TURN, MAX_LEVEL,
-  getTheme, getScoreForLevel,
+  getTheme, getScoreForLevel, getAssetName,
 } from './constants.js';
 
 export class Game {
-  constructor(app, engine) {
+  constructor(app, engine, sheetTextures = null) {
     this.app = app;
     this.engine = engine;
     this.state = 'menu';
     this.score = 0;
     this.level = 1;
+    this.sheetTextures = sheetTextures;
     this.highScore = parseInt(localStorage.getItem('blockblast_highscore') || '0', 10);
     this.highLevel = parseInt(localStorage.getItem('blockblast_highlevel') || '1', 10);
     this.grid = new Grid();
@@ -27,7 +28,6 @@ export class Game {
     this.isGameOver = false;
     this.currentTheme = getTheme(1);
     this._comboAnimating = false;
-    this.sheetTextures = null;
 
     this.container = new PIXI.Container();
     app.stage.addChild(this.container);
@@ -36,7 +36,6 @@ export class Game {
     this._createBackground();
     this._createGridUI();
     this._createUI();
-    this._loadSpriteSheet();
     this._homePage = new HomePage(app, this.container, {
       onPlay: () => this.startGame(),
       onSettings: () => console.log('Settings'),
@@ -56,15 +55,6 @@ export class Game {
 
     this.boardDecor = new PIXI.Graphics();
     this.container.addChild(this.boardDecor);
-  }
-
-  async _loadSpriteSheet() {
-    try {
-      const sheet = await PIXI.Assets.load('./assets/game_master_sheet.json');
-      this.sheetTextures = sheet.textures;
-    } catch (e) {
-      console.warn('Failed to load spritesheet:', e);
-    }
   }
 
   _createGridUI() {
@@ -162,10 +152,6 @@ export class Game {
 
     this.piecesContainer = new PIXI.Container();
     this.container.addChild(this.piecesContainer);
-  }
-
-  _createMenu() {
-    this._homePage.show();
   }
 
   _createGameOver() {
@@ -289,10 +275,6 @@ export class Game {
 
     this.levelText.style.fill = theme.accent;
     this.restartBtn.style.fill = theme.accent;
-
-    if (this.menuTitle) {
-      this.menuTitle.style.fill = theme.accent;
-    }
   }
 
   _updateProgressBar() {
@@ -344,7 +326,7 @@ export class Game {
     const gridPos = this.grid.pixelToGrid(cx, cy);
 
     if (gridPos) {
-      const canPlace = this.grid.canPlace(piece.shapeMatrix, gridPos.row, gridPos.col, piece.colorIndex);
+      const canPlace = this.grid.canPlace(piece.shapeMatrix, gridPos.row, gridPos.col);
       piece.updateGhost(gridPos.row, gridPos.col, canPlace);
     } else {
       piece.hideGhost();
@@ -362,7 +344,7 @@ export class Game {
 
     const bestPos = piece.findBestGridPosition();
 
-    if (bestPos && this.grid.canPlace(piece.shapeMatrix, bestPos.row, bestPos.col, piece.colorIndex)) {
+    if (bestPos && this.grid.canPlace(piece.shapeMatrix, bestPos.row, bestPos.col)) {
       this.grid.placePiece(piece.shapeMatrix, bestPos.row, bestPos.col, piece.colorIndex);
 
       const cx = BOARD_OFFSET_X + bestPos.col * CELL_SIZE;
@@ -438,6 +420,52 @@ export class Game {
     this.activePieceIndex = -1;
   }
 
+  _animateLineClear(rows, cols) {
+    const flashCells = [];
+    for (const r of rows) {
+      for (let c = 0; c < GRID_SIZE; c++) flashCells.push({ row: r, col: c });
+    }
+    for (const c of cols) {
+      for (let r = 0; r < GRID_SIZE; r++) {
+        if (!rows.includes(r)) flashCells.push({ row: r, col: c });
+      }
+    }
+
+    const flashGraphics = flashCells.map(({ row, col }) => {
+      const g = new PIXI.Graphics();
+      const x = BOARD_OFFSET_X + col * CELL_SIZE;
+      const y = BOARD_OFFSET_Y + row * CELL_SIZE;
+      g.beginFill(0xffffff);
+      g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
+      g.endFill();
+      g.alpha = 0;
+      this.gridContainer.addChild(g);
+      return g;
+    });
+
+    let frame = 0;
+    const animate = () => {
+      if (this.isGameOver || this.state !== 'playing') {
+        for (const g of flashGraphics) {
+          if (g.parent) this.gridContainer.removeChild(g);
+        }
+        return;
+      }
+      frame++;
+      for (const g of flashGraphics) {
+        g.alpha = Math.sin(frame * 0.3) * 0.5 + 0.3;
+      }
+      if (frame > 15) {
+        for (const g of flashGraphics) {
+          if (g.parent) this.gridContainer.removeChild(g);
+        }
+        return;
+      }
+      this.app.ticker.addOnce(animate);
+    };
+    this.app.ticker.addOnce(animate);
+  }
+
   _showCombo(text, color) {
     if (this._comboAnimating) return;
     this._comboAnimating = true;
@@ -488,52 +516,6 @@ export class Game {
       g.alpha = frame / 8;
       if (frame >= 8) {
         this.gridContainer.removeChild(g);
-        return;
-      }
-      this.app.ticker.addOnce(animate);
-    };
-    this.app.ticker.addOnce(animate);
-  }
-
-  _animateLineClear(rows, cols) {
-    const flashCells = [];
-    for (const r of rows) {
-      for (let c = 0; c < GRID_SIZE; c++) flashCells.push({ row: r, col: c });
-    }
-    for (const c of cols) {
-      for (let r = 0; r < GRID_SIZE; r++) {
-        if (!rows.includes(r)) flashCells.push({ row: r, col: c });
-      }
-    }
-
-    const flashGraphics = flashCells.map(({ row, col }) => {
-      const g = new PIXI.Graphics();
-      const x = BOARD_OFFSET_X + col * CELL_SIZE;
-      const y = BOARD_OFFSET_Y + row * CELL_SIZE;
-      g.beginFill(0xffffff);
-      g.drawRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 4);
-      g.endFill();
-      g.alpha = 0;
-      this.gridContainer.addChild(g);
-      return g;
-    });
-
-    let frame = 0;
-    const animate = () => {
-      if (this.isGameOver || this.state !== 'playing') {
-        for (const g of flashGraphics) {
-          if (g.parent) this.gridContainer.removeChild(g);
-        }
-        return;
-      }
-      frame++;
-      for (const g of flashGraphics) {
-        g.alpha = Math.sin(frame * 0.3) * 0.5 + 0.3;
-      }
-      if (frame > 15) {
-        for (const g of flashGraphics) {
-          if (g.parent) this.gridContainer.removeChild(g);
-        }
         return;
       }
       this.app.ticker.addOnce(animate);
@@ -625,17 +607,15 @@ export class Game {
         const y = BOARD_OFFSET_Y + r * CELL_SIZE;
 
         if (val !== null) {
-          if (this.sheetTextures) {
-            const spriteName = `asset_${(val % 17) + 1}`;
-            const tex = this.sheetTextures[spriteName];
-            if (tex) {
-              const sprite = new PIXI.Sprite(tex);
-              sprite.x = x + 2;
-              sprite.y = y + 2;
-              sprite.width = CELL_SIZE - 4;
-              sprite.height = CELL_SIZE - 4;
-              g.addChild(sprite);
-            }
+          const spriteName = getAssetName(val);
+          const tex = this.sheetTextures ? this.sheetTextures[spriteName] : null;
+          if (tex) {
+            const sprite = new PIXI.Sprite(tex);
+            sprite.x = x + 2;
+            sprite.y = y + 2;
+            sprite.width = CELL_SIZE - 4;
+            sprite.height = CELL_SIZE - 4;
+            g.addChild(sprite);
           } else {
             const color = COLORS.cellOccupied[val % COLORS.cellOccupied.length];
             g.beginFill(color, 0.9);

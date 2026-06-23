@@ -27,6 +27,15 @@ export const GAME_HEIGHT = 800;
 export const MAX_LEVEL = 500;
 export const NUM_PIECES_PER_TURN = 3;
 
+export const ATLAS_PATH = './assets/game_master_sheet.json';
+
+export const TOTAL_ASSET_FRAMES = 17;
+export const ASSET_NAMES = Array.from({ length: TOTAL_ASSET_FRAMES }, (_, i) => `asset_${i + 1}`);
+
+export function getAssetName(index) {
+  return ASSET_NAMES[(index % TOTAL_ASSET_FRAMES) + TOTAL_ASSET_FRAMES - 1] || ASSET_NAMES[0];
+}
+
 const THEMES = [
   { background: 0x1a1a2e, boardBg: 0x16213e, accent: 0x4FC3F7, title: 'OCEAN' },
   { background: 0x1a2e1a, boardBg: 0x163e16, accent: 0x81C784, title: 'FOREST' },
@@ -107,6 +116,5 @@ export function getShapesForLevel(level) {
   if (level <= 100) return SHAPES_TIER1;
   if (level <= 200) return SHAPES_TIER2;
   if (level <= 300) return SHAPES_TIER3;
-  if (level <= 400) return SHAPES_TIER4;
   return SHAPES_TIER4;
 }

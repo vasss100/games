@@ -10,7 +10,7 @@ export class Grid {
   get width() { return GRID_SIZE * CELL_SIZE; }
   get height() { return GRID_SIZE * CELL_SIZE; }
 
-  canPlace(shape, row, col, colorIndex = null) {
+  canPlace(shape, row, col) {
     for (let r = 0; r < shape.length; r++) {
       for (let c = 0; c < shape[r].length; c++) {
         if (!shape[r][c]) continue;
@@ -28,15 +28,6 @@ export class Grid {
       for (let c = 0; c < shape[r].length; c++) {
         if (!shape[r][c]) continue;
         this.cells[row + r][col + c] = colorIndex;
-      }
-    }
-  }
-
-  removePiece(shape, row, col) {
-    for (let r = 0; r < shape.length; r++) {
-      for (let c = 0; c < shape[r].length; c++) {
-        if (!shape[r][c]) continue;
-        this.cells[row + r][col + c] = null;
       }
     }
   }
